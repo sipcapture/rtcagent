@@ -102,8 +102,8 @@ SEC("fentry/tcp_close")
 int BPF_PROG(tcp_close, struct sock *sk)
 {
 
-    char fmt2[] = "TIMESTAMP: %d\n";
-    bpf_trace_printk(fmt2, sizeof(fmt2), 1);
+    //char fmt2[] = "TIMESTAMP: %d\n";
+    //bpf_trace_printk(fmt2, sizeof(fmt2), 1);
 
     if (sk->__sk_common.skc_family != AF_INET)
     {

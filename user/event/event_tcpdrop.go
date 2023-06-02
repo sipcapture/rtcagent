@@ -88,7 +88,7 @@ func (tcpev *TcpdropEvent) StringHex() string {
 
 func intToIP(ipNum uint32) net.IP {
 	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, ipNum)
+	binary.LittleEndian.PutUint32(ip, ipNum)
 	return ip
 }
 
