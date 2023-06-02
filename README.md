@@ -80,7 +80,7 @@ make
 bin/rtcagent
 ```
 #### compile without BTF
-RTCAgent support BTF disabled with command `make nocore` to compile at 2022/04/17. It can work normally even on Linux systems that do not support BTF.
+RTCAgent support BTF disabled with command `make nocore` to compile at 2022/04/17 and can run on Linux systems that do not support BTF.
 ```shell
 make nocore
 bin/rtcagent --help
@@ -90,4 +90,4 @@ bin/rtcagent --help
 
 ### Credits
 
-This Project was inspired by Cilum, Odigos, eCapture and the many libraries, implementations making this possible.
+RTCAgent is inspired by Cilum, Odigos, eCapture and the many eBPF guides, libraries and implementations.
