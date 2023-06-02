@@ -11,19 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
         go-version: 1.19
-
-    - name: Setup Env
+    - name: Setup Build Env
       run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com//sipcapture/rtcagent/master/builder/init_env.sh)"
-
-    - name: Build
+    - name: Build RTCAgent
       run: make
-
-    - name: Check
-      run: ls -alFh bin/rtcagent
-    - name: RUn
-      run: ./bin/rtcagent --help
+    - name: Check & Run
+      run: |
+        ls -alFh bin/rtcagent
+        ./bin/rtcagent --help
+    - name: Upload Release
+      if: github.event_name != 'pull_request'
+      uses: boxpositron/upload-multiple-releases@1.0.7
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+          release_config: |
+              ./bin/rtcagent
+          tag_name: ${{ env.VERSION }}
+          release_name: rtcagent_${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          overwrite: true
