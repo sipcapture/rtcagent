@@ -1,0 +1,19 @@
+name: rtcagent
+arch: amd64
+platform: linux
+version: 0.0.0
+release: 1
+section: default
+priority: extra
+replaces:
+  - rtcagent
+provides:
+  - rtcagent
+maintainer: Alexandr Dubovikob <alexadnr.dubovikov@gmail.com>
+description: RTCagent is a HEP/eBPF sniffer for VoiP/RTC Applications
+vendor: sipcapture.org
+homepage: http://sipcapture.org
+license: AGPLv3
+contents:
+  - src: ./bin/rtcagent
+    dst: /usr/bin/rtcagent
