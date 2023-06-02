@@ -31,7 +31,7 @@ jobs:
       with:
           release_config: |
               ./bin/rtcagent
-          tag_name: ${{ env.VERSION }}
+          tag_name: ${{ github.ref_name }}
           release_name: rtcagent_${{ github.ref_name }}
           draft: false
           prerelease: false
