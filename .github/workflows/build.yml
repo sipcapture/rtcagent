@@ -1,0 +1,29 @@
+name: RTCAgent Builder
+
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+    
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+
+    - name: Setup Env
+      run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com//sipcapture/rtcagent/master/builder/init_env.sh)"
+
+    - name: Build
+      run: make
+
+    - name: Check
+      run: ls -alFh bin/rtcagent
+    - name: RUn
+      run: ./bin/rtcagent --help
