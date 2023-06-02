@@ -23,6 +23,29 @@ jobs:
       run: |
         ls -alFh bin/rtcagent
         ./bin/rtcagent --help
+        
+    - name: Patch NFPM Version
+      run: |
+          sudo sed -i "s/0.0.0/${{ github.ref_name }}/g" rtcagent.yml
+    - name: Create deb package
+      id: nfpm-deb
+      uses: burningalchemist/nfpm-action@v1
+      env:
+          VERSION: ${{ github.event.release.tag_name }}
+      with:
+          packager: deb
+          config: rtcagent.yml
+          target: rtcagent_${{  github.ref_name }}_all.deb
+    - name: Create rpm package
+      id: nfpm-rpm
+      uses: burningalchemist/nfpm-action@v1
+      env:
+          VERSION: ${{ github.event.release.tag_name }}
+      with:
+          packager: rpm
+          config: rtcagent.yml
+          target: rtcagent_${{  github.ref_name }}.amd64.rpm
+          
     - name: Upload Release
       if: github.event_name != 'pull_request'
       uses: boxpositron/upload-multiple-releases@1.0.7
@@ -31,8 +54,11 @@ jobs:
       with:
           release_config: |
               ./bin/rtcagent
+              ./rtcagent_${{ github.ref_name }}_all.deb
+              ./rtcagent_${{ github.ref_name }}.amd64.rpm
           tag_name: ${{ github.ref_name }}
           release_name: rtcagent_${{ github.ref_name }}
           draft: false
           prerelease: false
-          overwrite: true
+          overwrite: true    
+        
