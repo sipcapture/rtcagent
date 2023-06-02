@@ -28,7 +28,7 @@ Linux Kernel: >= 4.18.
 ### ubuntu
 If you are using Ubuntu 20.04 or later versions, you can use a single command to complete the initialization of the compilation environment.
 ```shell
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/adubovikov/rtcagent/master/builder/init_env.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com//sipcapture/rtcagent/master/builder/init_env.sh)"
 ```
 ### other Linux
 In addition to the software listed in the 'Toolchain Version' section above, the following software is also required for the compilation environment. Please install it yourself.
@@ -39,7 +39,7 @@ In addition to the software listed in the 'Toolchain Version' section above, the
 
 **Clone the repository code and compile it**
 ```shell
-git clone git@github.com:adubovikov/rtcagent.git
+git clone git@github.com:/sipcapture/rtcagent.git
 cd rtcagent
 make
 bin/rtcagent

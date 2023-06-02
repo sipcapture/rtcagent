@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/adubovikov/rtcagent/master/builder/init_env.sh)"
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com//sipcapture/rtcagent/master/builder/init_env.sh)"
 
 # check env
 release_num=$(lsb_release -r --short)
@@ -66,6 +66,6 @@ sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ${GOBIN_ZIP}
 export PATH=/usr/local/go/bin:$PATH
 
 # clone repo
-git clone https://github.com/adubovikov/rtcagent.git
+git clone https://github.com//sipcapture/rtcagent.git
 cd ./rtcagent || exit
 ${MAKE_RTCAGENT}

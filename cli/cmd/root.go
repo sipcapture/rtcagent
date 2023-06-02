@@ -50,7 +50,7 @@ var rootCmd = &cobra.Command{
 	Long: `RTCAgent is a tool that can capture and trace SIP packets by hijacking application's function like kamailio, freeswitch
 		it can also make tcpdrop statics on the server.
 
-Repository: https://github.com/adubovikov/rtcagent
+Repository: https://github.com//sipcapture/rtcagent
 HomePage: https://www.qxip.net
 
 Usage:
