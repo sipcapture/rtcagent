@@ -16,7 +16,7 @@ USAGE:	rtcagent [flags]
 
 COMMANDS:
 
-	freeswitch	capture SIP messages from freeswitch: recv_msg, udp_send, tcp_send.
+	freeswitch	capture SIP messages from freeswitch (libsofia): t_port, su_recv
 	help		Help about any command
 	kamailio	capture SIP messages from kamailio: recv_msg, udp_send, tcp_send.
 	tcpdrop		show tcp drops
