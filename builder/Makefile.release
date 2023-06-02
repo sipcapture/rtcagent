@@ -1,0 +1,202 @@
+#
+# Responsible for creating rtcagent snapshots for testing and releasing
+#
+
+.PHONY: all
+all: help
+release: snapshot snapshot_android publish
+
+#
+# make
+#
+
+.ONESHELL:
+SHELL = /bin/sh
+
+MAKEFLAGS += --no-print-directory
+
+#
+# tools
+#
+
+CMD_CHECKSUM ?= sha256sum
+CMD_GITHUB ?= gh
+CMD_TAR ?= tar
+CMD_GIT ?= git
+CMD_RM ?= rm
+CMD_TOUCH ?= touch
+CMD_MKDIR ?= mkdir
+CMD_MV ?= mv
+CMD_CP ?= cp
+
+UNAME_M := $(shell uname -m)
+SNAPSHOT_VERSION ?= $(shell git rev-parse HEAD)
+
+.ONESHELL:
+.check_%:
+#
+	@command -v $* >/dev/null
+	if [ $$? -ne 0 ]; then
+		echo "missing required tool $*"
+		exit 1
+	else
+		touch $@ # avoid target rebuilds due to inexistent file
+	fi
+
+#
+# environment
+#
+
+.PHONY: env
+env:
+	@echo ---------------------------------------
+	@echo "CMD_CHECKSUM          $(CMD_CHECKSUM)"
+	@echo "CMD_GIT               $(CMD_GIT)"
+	@echo "CMD_GITHUB            $(CMD_GITHUB)"
+	@echo "CMD_TAR               $(CMD_TAR)"
+	@echo "CMD_TOUCH             $(CMD_TOUCH)"
+	@echo "CMD_RM                $(CMD_RM)"
+	@echo "CMD_MKDIR             $(CMD_MKDIR)"
+	@echo ---------------------------------------
+	@echo "SNAPSHOT_VERSION      $(SNAPSHOT_VERSION)"
+	@echo ---------------------------------------
+
+#
+# usage
+#
+
+.PHONY: help
+help:
+	@echo ""
+	@echo "Create rtcagent snapshots for testing and releasing"
+	@echo ""
+	@echo "To generate a release snapshot:"
+	@echo ""
+	@echo "    $$ make -f builder/Makefile.release snapshot"
+	@echo ""
+	@echo "    - Compiles rtcagent"
+	@echo "    - Creates an archive of build artifacts along with license"
+	@echo "    - Takes a checksum of the archive"
+	@echo ""
+	@echo "    Example:"
+	@echo ""
+	@echo "        To create build artifacts versioned by latest git SHA:"
+	@echo ""
+	@echo "        $$ make -f builder/Makefile.release snapshot"
+	@echo ""
+	@echo "        To create build artifacts with version v0.1.6:"
+	@echo ""
+	@echo "        $$ SNAPSHOT_VERSION=v0.1.6 \ "
+	@echo "                make -f builder/Makefile.release snapshot"
+	@echo ""
+	@echo "To publish a release:"
+	@echo ""
+	@echo "    $$ SNAPSHOT_VERSION=v0.1.6 \ "
+	@echo "        make -f builder/Makefile.release publish"
+	@echo ""
+	@echo ""
+	@echo "Clean leftovers:"
+	@echo ""
+	@echo "    $$ make -f builder/Makefile.release clean"
+	@echo ""
+
+#
+# requirements
+#
+
+.PHONY: .check_tree
+.check_tree:
+#
+	@if [ ! -d ./builder ]; then
+		echo "you must be in the root directory"
+		exit 1
+	fi
+
+#
+# output dir
+#
+
+OUTPUT_DIR = ./bin
+TAR_DIR = rtcagent-$(SNAPSHOT_VERSION)-linux-$(UNAME_M)
+TAR_DIR_ANDROID = rtcagent-$(SNAPSHOT_VERSION)-android-$(UNAME_M)
+
+# from CLI args.
+RELEASE_NOTES ?= $(OUTPUT_DIR)/release_notes.txt
+
+$(OUTPUT_DIR):
+#
+	$(CMD_MKDIR) -p $@
+#	$(CMD_TOUCH) $(RELEASE_NOTES)
+
+#
+# Create a release snapshot
+#
+
+OUT_ARCHIVE := $(OUTPUT_DIR)/$(TAR_DIR).tar.gz
+OUT_ARCHIVE_ANDROID := $(OUTPUT_DIR)/$(TAR_DIR_ANDROID).tar.gz
+OUT_CHECKSUMS := $(OUTPUT_DIR)/checksum-$(SNAPSHOT_VERSION).txt
+
+.PHONY: snapshot
+snapshot: \
+	$(OUTPUT_DIR) \
+	| .check_tree \
+	.check_$(CMD_TAR) \
+	.check_$(CMD_CHECKSUM) \
+	.check_$(CMD_GITHUB)
+
+	# build binaries
+	$(MAKE) clean
+	$(MAKE) nocore
+	# create the tar ball and checksum files
+	$(CMD_MKDIR) -p $(TAR_DIR)
+	$(CMD_CP) LICENSE $(TAR_DIR)/LICENSE
+	$(CMD_CP) CHANGELOG.md $(TAR_DIR)/CHANGELOG.md
+	$(CMD_CP) README.md $(TAR_DIR)/README.md
+	$(CMD_CP) README_CN.md $(TAR_DIR)/README_CN.md
+	$(CMD_MV) $(OUTPUT_DIR)/rtcagent $(TAR_DIR)/rtcagent
+	$(CMD_CP) $(RELEASE_NOTES) $(OUTPUT_DIR)/release_notes.txt
+	$(CMD_TAR)  -czf $(OUT_ARCHIVE) $(TAR_DIR)
+	cd $(OUTPUT_DIR)
+	$(CMD_CHECKSUM) $(TAR_DIR).tar.gz > ./../$(OUT_CHECKSUMS)
+	cd ../
+
+.PHONY: snapshot_android
+snapshot_android: \
+	$(OUTPUT_DIR) \
+	| .check_tree \
+	.check_$(CMD_TAR) \
+	.check_$(CMD_CHECKSUM) \
+	.check_$(CMD_GITHUB)
+
+	# build binaries
+	$(MAKE) clean
+	ANDROID=1 $(MAKE) nocore
+	# create the tar ball and checksum files
+	$(CMD_MKDIR) -p $(TAR_DIR_ANDROID)
+	$(CMD_CP) LICENSE $(TAR_DIR_ANDROID)/LICENSE
+	$(CMD_CP) CHANGELOG.md $(TAR_DIR_ANDROID)/CHANGELOG.md
+	$(CMD_CP) README.md $(TAR_DIR_ANDROID)/README.md
+	$(CMD_CP) README_CN.md $(TAR_DIR_ANDROID)/README_CN.md
+	$(CMD_MV) $(OUTPUT_DIR)/rtcagent $(TAR_DIR_ANDROID)/rtcagent
+	$(CMD_CP) $(RELEASE_NOTES) $(TAR_DIR_ANDROID)/release_notes.txt
+	$(CMD_TAR)  -czf $(OUT_ARCHIVE_ANDROID) $(TAR_DIR_ANDROID)
+	cd $(OUTPUT_DIR)
+	$(CMD_CHECKSUM) $(TAR_DIR_ANDROID).tar.gz >> ./../$(OUT_CHECKSUMS)
+	cd ../
+
+.PHONY: publish
+publish: \
+	$(OUTPUT_DIR) \
+	$(OUT_ARCHIVE) \
+	$(OUT_ARCHIVE_ANDROID) \
+	$(OUT_CHECKSUMS) \
+	| .check_tree \
+	.check_$(CMD_GITHUB)
+#
+	# release it!
+	$(CMD_GITHUB) release create $(SNAPSHOT_VERSION) $(OUT_ARCHIVE) $(OUT_ARCHIVE_ANDROID) $(OUT_CHECKSUMS) --title "RtcAgent $(SNAPSHOT_VERSION)"  --notes-file $(RELEASE_NOTES)
+
+.PHONY: clean
+clean:
+#
+	$(MAKE) clean
