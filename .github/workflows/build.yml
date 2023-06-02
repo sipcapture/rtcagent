@@ -18,7 +18,11 @@ jobs:
     - name: Setup Build Env
       run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com//sipcapture/rtcagent/master/builder/init_env.sh)"
     - name: Build RTCAgent
-      run: make
+      run: make     
+    - name: Compress
+      run: |
+        strip bin/rtcagent
+        upx bin/rtcagent 
     - name: Check & Run
       run: |
         ls -alFh bin/rtcagent
