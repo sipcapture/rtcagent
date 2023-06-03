@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"net"
 	"rtcagent/outdata/hep"
-	"time"
+	monotonic "rtcagent/user/time"
 )
 
 const MaxDataSize = 1024 * 4
@@ -186,8 +186,9 @@ func (kem *KamailioEvent) String() string {
 
 	srcIP := net.IP(t.SrcIP.Addr[:4])
 	dstIP := net.IP(t.DstIP.Addr[:4])
-
 	addr := fmt.Sprintf("%s:%d", srcIP.String(), t.SrcPort)
+
+	date := monotonic.GetRealTime(kem.Timestamp)
 
 	var perfix, connInfo string
 	switch AttachType(kem.DataType) {
@@ -201,8 +202,8 @@ func (kem *KamailioEvent) String() string {
 		connInfo = fmt.Sprintf("%sUNKNOW_%d%s", COLORRED, kem.DataType, COLORRESET)
 	}
 
-	s := fmt.Sprintf("PID:%d, Comm:%s, TID:%d, %s, Time:%d, SrcIP: %s, SrcPort: %d, DstIP: %s, DstPort: %d, Payload:\n%s%s%s", kem.Pid, bytes.TrimSpace(kem.Comm[:]), kem.Tid, connInfo,
-		kem.Timestamp,
+	s := fmt.Sprintf("PID:%d, Comm:%s, TID:%d, %s, TimeML: %d, RealTime: %s, SrcIP: %s, SrcPort: %d, DstIP: %s, DstPort: %d, Payload:\n%s%s%s", kem.Pid, bytes.TrimSpace(kem.Comm[:]), kem.Tid, connInfo,
+		kem.Timestamp, date.String(),
 		srcIP.String(), t.SrcPort, dstIP.String(), t.DstPort, perfix, string(kem.Data[:kem.DataLen]), COLORRESET)
 
 	//s := fmt.Sprintf("PID:%d, Comm:%s, TID:%d, %s, SrcPort: %d, DstPort:%d, SrcIPv6: %d, Mask: %d, Payload:\n%s%s%s", kem.Pid, bytes.TrimSpace(kem.Comm[:]), kem.Tid, connInfo,
@@ -227,7 +228,7 @@ func (kem *KamailioEvent) GenerateHEP() ([]byte, error) {
 	srcIP := net.IP(t.SrcIP.Addr[:4])
 	dstIP := net.IP(t.DstIP.Addr[:4])
 
-	var date time.Time
+	date := monotonic.GetRealTime(kem.Timestamp)
 
 	hepPacket := hep.Packet{
 		Version:   0x02,

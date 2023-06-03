@@ -366,7 +366,7 @@ assets_nocore: \
 build: \
 	.checkver_$(CMD_GO) \
 	assets
-	CGO_ENABLED=0 $(CMD_GO) build -tags $(TARGET_TAG) -ldflags "-w -s -X 'rtcagent/cli/cmd.GitVersion=$(TARGET_TAG)_$(UNAME_M):$(VERSION):[CORE]'" -o bin/rtcagent .
+	CGO_ENABLED=1 $(CMD_GO) build -tags $(TARGET_TAG) -ldflags "-extldflags '-static' -w -s -X 'rtcagent/cli/cmd.GitVersion=$(TARGET_TAG)_$(UNAME_M):$(VERSION):[CORE]'" -tags netgo -installsuffix netgo -o bin/rtcagent .
 
 
 # FOR NON-CORE
@@ -375,7 +375,7 @@ build_nocore: \
 	.checkver_$(CMD_GO) \
 	assets_nocore \
 	ebpf_nocore
-	CGO_ENABLED=0 $(CMD_GO) build -tags $(TARGET_TAG) -ldflags "-w -s -X 'rtcagent/cli/cmd.GitVersion=$(TARGET_TAG)_$(UNAME_M):$(VERSION):$(UNAME_R)' -X 'main.enableCORE=false'" -o bin/rtcagent .
+	CGO_ENABLED=1 $(CMD_GO) build -tags $(TARGET_TAG) -ldflags "-extldflags '-static' -w -s -X 'rtcagent/cli/cmd.GitVersion=$(TARGET_TAG)_$(UNAME_M):$(VERSION):$(UNAME_R)' -X 'main.enableCORE=false'" -tags netgo -installsuffix netgo -o bin/rtcagent .
 
 # Format the code
 format:

@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"net"
 	"rtcagent/outdata/hep"
-	"time"
+	monotonic "rtcagent/user/time"
 )
 
 type IpAddrFS struct {
@@ -163,8 +163,10 @@ func (kem *FreeSwitchEvent) String() string {
 		connInfo = fmt.Sprintf("%sUNKNOW_%d%s", COLORRED, kem.DataType, COLORRESET)
 	}
 
-	s := fmt.Sprintf("PID:%d, Comm:%s, TID:%d, %s, Time:%d, SrcIP: %s, SrcPort: %d, DstIP: %s, DstPort: %d, Payload:\n%s%s, \n%s", kem.Pid, bytes.TrimSpace(kem.Comm[:]), kem.Tid, connInfo,
-		kem.Timestamp, srcIP, srcPort, dstIP, dstPort, perfix, string(kem.Data[:kem.DataLen]), COLORRESET)
+	date := monotonic.GetRealTime(kem.Timestamp)
+
+	s := fmt.Sprintf("PID:%d, Comm:%s, TID:%d, %s, TimeML: %d, RealTime: %s, SrcIP: %s, SrcPort: %d, DstIP: %s, DstPort: %d, Payload:\n%s%s, \n%s", kem.Pid, bytes.TrimSpace(kem.Comm[:]), kem.Tid, connInfo,
+		kem.Timestamp, date.String(), srcIP, srcPort, dstIP, dstPort, perfix, string(kem.Data[:kem.DataLen]), COLORRESET)
 
 	return s
 }
@@ -186,7 +188,7 @@ func (kem *FreeSwitchEvent) GenerateHEP() ([]byte, error) {
 	srcIP := net.IP(dst.IP.Addr[:4])
 	dstIP := net.IP(dst.IP.Addr[:4])
 
-	var date time.Time
+	date := monotonic.GetRealTime(kem.Timestamp)
 
 	hepPacket := hep.Packet{
 		Version:   0x02,
