@@ -42,7 +42,7 @@ var freeswitchConfig = config.NewFreeSwitchConfig()
 // freeswitchCmd represents the freeswitch command
 var freeswitchCmd = &cobra.Command{
 	Use:   "freeswitch",
-	Short: "capture SIP messages from freeswitch: recv_msg, udp_send, tcp_send.",
+	Short: "capture SIP messages from freeswitch (libsofia): t_port, su_recv.",
 	Long:  ` Tested on freeswitch 1.x`,
 	Run:   freeswitchCommandFunc,
 }
