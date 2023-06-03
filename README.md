@@ -102,6 +102,20 @@ bin/rtcagent --help
 
 <br>
 
+### Docker
+```
+rtcagent:
+    privileged: true
+    pid: host
+    image: ghcr.io/sipcapture/rtcagent
+    container_name: rtcagent
+    restart: unless-stopped
+    volumes:
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+      - /sys/kernel/debug:/sys/kernel/debug:rw
+    command: --cgroupfs-root=/host/sys/fs/cgroup
+```
+
 ### Credits
 
 RTCAgent is inspired by Cilum, Odigos, eCapture and the many eBPF guides, libraries and implementations.
