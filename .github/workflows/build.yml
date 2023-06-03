@@ -4,7 +4,12 @@ on:
   workflow_dispatch:
   release:
     types: [created]
-    
+
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  
 jobs:
 
   build:
@@ -65,4 +70,19 @@ jobs:
           draft: false
           prerelease: false
           overwrite: true    
-        
+          
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2.0.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Docker Build and push
+      uses: docker/build-push-action@v3.0.0
+      with:
+        context: .
+        push: true
+        tags: |
+           ghcr.io/sipcapture/rtcagent:latest
+           ghcr.io/sipcapture/rtcagent:${{ github.ref_name }}
