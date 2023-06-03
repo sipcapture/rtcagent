@@ -114,7 +114,7 @@ func (kem *FreeSwitchEvent) StringHex() string {
 	var perfix, connInfo string
 	switch AttachType(kem.DataType) {
 	case ProbeEntry:
-		connInfo = fmt.Sprintf("%sRecived %d%s bytes from %s%s%s", COLORGREEN, kem.DataLen, COLORRESET, COLORYELLOW, addr, COLORRESET)
+		connInfo = fmt.Sprintf("%sReceived %d%s bytes from %s%s%s", COLORGREEN, kem.DataLen, COLORRESET, COLORYELLOW, addr, COLORRESET)
 		perfix = COLORGREEN
 	case ProbeRet:
 		connInfo = fmt.Sprintf("%sSend %d%s bytes to %s%s%s", COLORPURPLE, kem.DataLen, COLORRESET, COLORYELLOW, addr, COLORRESET)
@@ -154,7 +154,7 @@ func (kem *FreeSwitchEvent) String() string {
 	var perfix, connInfo string
 	switch AttachType(kem.DataType) {
 	case ProbeEntry:
-		connInfo = fmt.Sprintf("%sRecived %d%s bytes from %s%s%s", COLORGREEN, kem.DataLen, COLORRESET, COLORYELLOW, addr, COLORRESET)
+		connInfo = fmt.Sprintf("%sReceived %d%s bytes from %s%s%s", COLORGREEN, kem.DataLen, COLORRESET, COLORYELLOW, addr, COLORRESET)
 		perfix = COLORGREEN
 	case ProbeRet:
 		connInfo = fmt.Sprintf("%sSend %d%s bytes to %s%s%s", COLORPURPLE, kem.DataLen, COLORRESET, COLORYELLOW, addr, COLORRESET)

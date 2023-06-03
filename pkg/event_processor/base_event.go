@@ -141,7 +141,7 @@ func (be *BaseEvent) StringHex() string {
 	var perfix, connInfo string
 	switch AttachType(be.DataType) {
 	case ProbeEntry:
-		connInfo = fmt.Sprintf("Recived %d bytes", be.Data_len)
+		connInfo = fmt.Sprintf("Received %d bytes", be.Data_len)
 	case ProbeRet:
 		connInfo = fmt.Sprintf("Send %d bytes", be.Data_len)
 	default:
@@ -165,7 +165,7 @@ func (be *BaseEvent) String() string {
 	var connInfo string
 	switch AttachType(be.DataType) {
 	case ProbeEntry:
-		connInfo = fmt.Sprintf("Recived %dbytes", be.Data_len)
+		connInfo = fmt.Sprintf("Received %dbytes", be.Data_len)
 	case ProbeRet:
 		connInfo = fmt.Sprintf("Send %d bytes", be.Data_len)
 	default:
