@@ -24,34 +24,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package config
 
-type TcpdropType uint8
+type TcprttType uint8
 
 const (
-	TcpdropTypeUnknow TcpdropType = iota
-	TcpdropType5
-	TcpdropType4
-	TcpdropType3
-	TcpdropType2
+	TcprttTypeUnknow TcprttType = iota
+	TcprttType5
+	TcprttType4
+	TcprttType3
+	TcprttType2
 )
 
-// tcpdrop
-type TcpdropConfig struct {
+// tcprtt
+type TcprttConfig struct {
 	eConfig
-	Tcpdroppath string      `json:"tcpdropPath"`
-	ElfType     uint8       //
-	Version     TcpdropType //
-	VersionInfo string      // info
+	Tcprttpath  string     `json:"tcprttPath"`
+	ElfType     uint8      //
+	Version     TcprttType //
+	VersionInfo string     // info
 }
 
-func NewTcpdropConfig() *TcpdropConfig {
-	config := &TcpdropConfig{}
+func NewTcprttConfig() *TcprttConfig {
+	config := &TcprttConfig{}
 	return config
 }
 
-func (this *TcpdropConfig) Check() error {
+func (this *TcprttConfig) Check() error {
 
 	//if funcName == "" {
-	//	return errors.New(fmt.Sprintf("cant match tcpdrop 'receive_msg'function to hook with tcpdrop file::%s", this.Tcpdroppath))
+	//	return errors.New(fmt.Sprintf("cant match tcprtt 'receive_msg'function to hook with tcprtt file::%s", this.Tcprttpath))
 	//}
 
 	return nil

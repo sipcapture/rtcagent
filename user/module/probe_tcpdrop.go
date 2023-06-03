@@ -41,7 +41,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type MTcpdropProbe struct {
+type MTcprttProbe struct {
 	Module
 	bpfManager        *manager.Manager
 	bpfManagerOptions manager.Options
@@ -50,7 +50,7 @@ type MTcpdropProbe struct {
 	linkData          link.Link
 }
 
-func (this *MTcpdropProbe) Init(ctx context.Context, logger *log.Logger, conf config.IConfig) error {
+func (this *MTcprttProbe) Init(ctx context.Context, logger *log.Logger, conf config.IConfig) error {
 	this.Module.Init(ctx, logger, conf)
 	this.conf = conf
 	this.Module.SetChild(this)
@@ -59,7 +59,7 @@ func (this *MTcpdropProbe) Init(ctx context.Context, logger *log.Logger, conf co
 	return nil
 }
 
-func (this *MTcpdropProbe) Start() error {
+func (this *MTcprttProbe) Start() error {
 	if err := this.start(); err != nil {
 		return err
 	}
@@ -78,14 +78,14 @@ type bpfObjects struct {
 	bpfMaps
 }
 
-func (this *MTcpdropProbe) start() error {
+func (this *MTcprttProbe) start() error {
 
 	// Allow the current process to lock memory for eBPF resources.
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatal(err)
 	}
 
-	var bpfFileName = this.geteBPFName("user/bytecode/tcpdrop_kern.o")
+	var bpfFileName = this.geteBPFName("user/bytecode/tcprtt_kern.o")
 	this.logger.Printf("%s\tBPF bytecode filename: [%s]\n", this.Name(), bpfFileName)
 
 	byteBuf, err := assets.Asset(bpfFileName)
@@ -115,7 +115,7 @@ func (this *MTcpdropProbe) start() error {
 	}
 
 	this.eventMaps = append(this.eventMaps, objs.bpfMaps.Events)
-	this.eventFuncMaps[objs.bpfMaps.Events] = &event.TcpdropEvent{}
+	this.eventFuncMaps[objs.bpfMaps.Events] = &event.TcprttEvent{}
 
 	err = this.initDecodeFun()
 	if err != nil {
@@ -125,7 +125,7 @@ func (this *MTcpdropProbe) start() error {
 	return nil
 }
 
-func (this *MTcpdropProbe) Close() error {
+func (this *MTcprttProbe) Close() error {
 
 	this.linkData.Close()
 	if err := this.bpfManager.Stop(manager.CleanAll); err != nil {
@@ -134,11 +134,11 @@ func (this *MTcpdropProbe) Close() error {
 	return this.Module.Close()
 }
 
-func (this *MTcpdropProbe) setupManagers() error {
+func (this *MTcprttProbe) setupManagers() error {
 	var binaryPath string
 
-	version := this.conf.(*config.TcpdropConfig).Version
-	versionInfo := this.conf.(*config.TcpdropConfig).VersionInfo
+	version := this.conf.(*config.TcprttConfig).Version
+	versionInfo := this.conf.(*config.TcprttConfig).VersionInfo
 
 	var probes = []*manager.Probe{
 		{
@@ -157,7 +157,7 @@ func (this *MTcpdropProbe) setupManagers() error {
 		},
 	}
 
-	this.logger.Printf("%s\tTcpdrop: %d, Version:%s, binrayPath:%s\n", this.Name(), version, versionInfo, binaryPath)
+	this.logger.Printf("%s\tTcprtt: %d, Version:%s, binrayPath:%s\n", this.Name(), version, versionInfo, binaryPath)
 
 	this.bpfManagerOptions = manager.Options{
 		DefaultKProbeMaxActive: 512,
@@ -176,12 +176,12 @@ func (this *MTcpdropProbe) setupManagers() error {
 	return nil
 }
 
-func (this *MTcpdropProbe) DecodeFun(em *ebpf.Map) (event.IEventStruct, bool) {
+func (this *MTcprttProbe) DecodeFun(em *ebpf.Map) (event.IEventStruct, bool) {
 	fun, found := this.eventFuncMaps[em]
 	return fun, found
 }
 
-func (this *MTcpdropProbe) initDecodeFun() error {
+func (this *MTcprttProbe) initDecodeFun() error {
 
 	prefix := event.COLORCYAN
 
@@ -190,13 +190,13 @@ func (this *MTcpdropProbe) initDecodeFun() error {
 	return nil
 }
 
-func (this *MTcpdropProbe) Events() []*ebpf.Map {
+func (this *MTcprttProbe) Events() []*ebpf.Map {
 	return this.eventMaps
 }
 
 func init() {
-	mod := &MTcpdropProbe{}
-	mod.name = ModuleNameTcpdrop
+	mod := &MTcprttProbe{}
+	mod.name = ModuleNameTcprtt
 	mod.mType = ProbeTypeFentry
 	Register(mod)
 }

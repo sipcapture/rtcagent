@@ -33,7 +33,7 @@ const (
 const (
 	ModuleNameKamailio   = "EBPFProbeKamailio"
 	ModuleNameFreeSwitch = "EBPFProbeFreeSwitch"
-	ModuleNameTcpdrop    = "EBPFProbeTcpdrop"
+	ModuleNameTcprtt     = "EBPFProbeTcprtt"
 )
 
 const (

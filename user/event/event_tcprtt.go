@@ -29,7 +29,7 @@ import (
 	"net"
 )
 
-type TcpdropEvent struct {
+type TcprttEvent struct {
 	Sport uint16 `json:"sport"`
 	Dport uint16 `json:"dport"`
 	Saddr uint32 `json:"saddr"`
@@ -37,7 +37,7 @@ type TcpdropEvent struct {
 	SRTT  uint32 `json:"srtt"`
 }
 
-func (tcpev *TcpdropEvent) Decode(payload []byte) (err error) {
+func (tcpev *TcprttEvent) Decode(payload []byte) (err error) {
 
 	buf := bytes.NewBuffer(payload)
 
@@ -61,20 +61,20 @@ func (tcpev *TcpdropEvent) Decode(payload []byte) (err error) {
 	return nil
 }
 
-func (tcpev *TcpdropEvent) GetUUID() string {
+func (tcpev *TcprttEvent) GetUUID() string {
 	return fmt.Sprintf("%d_%d", tcpev.Sport, tcpev.Dport)
 }
 
-func (tcpev *TcpdropEvent) Payload() []byte {
+func (tcpev *TcprttEvent) Payload() []byte {
 	da := []byte{}
 	return da
 }
 
-func (tcpev *TcpdropEvent) PayloadLen() int {
+func (tcpev *TcprttEvent) PayloadLen() int {
 	return 0
 }
 
-func (tcpev *TcpdropEvent) StringHex() string {
+func (tcpev *TcprttEvent) StringHex() string {
 	//var connInfo string
 	//perfix = COLORGREEN
 	//s := fmt.Sprintf("PID:%d, Comm:%s, TID:%d, %s, Version:%s, Mask: %d, Payload:\n%s", tcpev.Pid, CToGoString(tcpev.Comm[:]),
@@ -92,7 +92,7 @@ func intToIP(ipNum uint32) net.IP {
 	return ip
 }
 
-func (tcpev *TcpdropEvent) String() string {
+func (tcpev *TcprttEvent) String() string {
 	//addr := tcpev.module.(*module.MOpenSSLProbe).GetConn(tcpev.Pid, tcpev.Fd)
 
 	srcIP := intToIP(tcpev.Saddr)
@@ -104,22 +104,22 @@ func (tcpev *TcpdropEvent) String() string {
 	return s
 }
 
-func (tcpev *TcpdropEvent) SendHep() bool {
+func (tcpev *TcprttEvent) SendHep() bool {
 	//Lets allow to send HEP
 	return false
 }
 
-func (tcpev *TcpdropEvent) GenerateHEP() ([]byte, error) {
+func (tcpev *TcprttEvent) GenerateHEP() ([]byte, error) {
 
 	return nil, fmt.Errorf("no data")
 
 }
 
-func (tcpev *TcpdropEvent) Clone() IEventStruct {
-	event := new(TcpdropEvent)
+func (tcpev *TcprttEvent) Clone() IEventStruct {
+	event := new(TcprttEvent)
 	return event
 }
 
-func (tcpev *TcpdropEvent) EventType() EventType {
+func (tcpev *TcprttEvent) EventType() EventType {
 	return 0
 }
