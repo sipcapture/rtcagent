@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"debug/elf"
 	"errors"
+	"log"
 	"os"
 	"strings"
 )
@@ -63,6 +64,7 @@ func (this *KamailioConfig) Check() error {
 	}
 
 	if this.GetNoSearch() {
+		log.Printf("RTCAGENT :: kamailio. No search")
 		return nil
 	}
 

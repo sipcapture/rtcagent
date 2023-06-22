@@ -116,9 +116,11 @@ func (this *MKamailioProbe) setupManagers() error {
 		binaryPath = "/usr/sbin/kamailio"
 	}
 
-	_, err := os.Stat(binaryPath)
-	if err != nil {
-		return err
+	if !this.conf.(*config.KamailioConfig).GetNoSearch() {
+		_, err := os.Stat(binaryPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	version := this.conf.(*config.KamailioConfig).Version
