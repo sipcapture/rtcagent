@@ -24,5 +24,5 @@ func GetTime() (uint64, int64) {
 func GetRealTime(capTime uint64) time.Time {
 	monotonic := uint64(C.get_nsecs())
 	timestamp := time.Now().UTC().UnixNano()
-	return time.Unix(0, (timestamp - int64(monotonic-capTime)))
+	return time.Unix(0, (timestamp - (int64(monotonic-capTime) * 1000)))
 }

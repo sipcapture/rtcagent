@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	GitVersion = "v0.0.0_unknow"
+	GitVersion = "v0.0.2"
 	//ReleaseDate = "2022-03-16"
 )
 

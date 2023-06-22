@@ -62,6 +62,10 @@ func (this *KamailioConfig) Check() error {
 		return errors.New("Kamailio path cant be null.")
 	}
 
+	if this.GetNoSearch() {
+		return nil
+	}
+
 	_, e := os.Stat(this.Kamailiopath)
 	if e != nil {
 		return e

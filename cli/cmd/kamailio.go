@@ -73,6 +73,9 @@ func kamailioCommandFunc(command *cobra.Command, args []string) {
 	kamailioConfig.Pid = gConf.Pid
 	kamailioConfig.Debug = gConf.Debug
 	kamailioConfig.IsHex = gConf.IsHex
+	kamailioConfig.NoSearch = gConf.NoSearch
+
+	logger.Printf("RTCAGENT :: kamailio - nosearch: %v", kamailioConfig.NoSearch)
 
 	if (gConf.HepServer != "" || len(strings.TrimSpace(gConf.HepServer)) > 0) && hepsender.Hepsender == nil {
 

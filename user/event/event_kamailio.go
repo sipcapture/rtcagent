@@ -232,7 +232,7 @@ func (kem *KamailioEvent) GenerateHEP() ([]byte, error) {
 
 	hepPacket := hep.Packet{
 		Version:   0x02,
-		Protocol:  17,
+		Protocol:  22,
 		SrcIP:     srcIP,
 		DstIP:     dstIP,
 		SrcPort:   t.SrcPort,
