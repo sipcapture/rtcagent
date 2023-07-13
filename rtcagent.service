@@ -1,0 +1,14 @@
+[Unit]
+Description=Captures packets with eBPF Filter and sends them to Homer
+Wants=network.target
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/rtcagent kamailio -m /opt/kamailio/sbin/kamailio --hep-server="127.0.0.1" --hep-port="9060" --hep-transport="tcp" --debug=false
+ExecStop=/bin/kill ${MAINPID}
+Restart=on-failure
+RestartSec=10s
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
