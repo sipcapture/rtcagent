@@ -6,8 +6,19 @@
 
 <br>
 
-### Made with eBPF
-Before proceeding, learn everything you need to know about [eBPF](https://ebpf.io)
+### About
+
+**RTCAgent** is a _next-generation **HEP Agent**_ developed using the latest **[eBPF](https://ebpf.io)** technologies.
+
+RTCAgent greatly differs from any other previous HEP Agent in several ways:
+
+- Unlike _native agents_, it does not require any code modifications or patches
+- Unlike _passive agents_, it does not require access to network interfaces and packets
+- Unlike _any other agent_, it attaches to software functions used for _sending/receiving_ data
+
+_The result is a lightweight Agent HEP able to mirror packets bypassing code integrations, encryption and complexity._
+
+<br>
 
 <a href="https://github.com/sipcapture">
 <img src="https://github.com/sipcapture/rtcagent/assets/1423657/3869ea12-f172-40d8-9baf-5f7a82b9e09c" height=400>
@@ -15,7 +26,7 @@ Before proceeding, learn everything you need to know about [eBPF](https://ebpf.i
 
 
 ### Download
-Download an `amd64/x86` static build of `rtcagent` and use it immediately.
+Download an `amd64/x86` static build of `rtcagent` and use it immediately on modern kernels.
 ```bash
 curl -fsSL github.com/sipcapture/rtcagent/releases/latest/download/rtcagent -O && chmod +x rtcagent
 ```
