@@ -2,7 +2,7 @@
 <img src="https://github.com/sipcapture/rtcagent/assets/1423657/e1d78a7e-cf2e-4775-9177-b0a730ba66c6" height=100>
 </a>
 
-RTCagent is an HEP/eBPF powered observability tool for VoIP/WebRTC Applications.
+> RTCagent is an HEP/eBPF powered observability tool for VoIP/WebRTC Applications.
 
 <br>
 
