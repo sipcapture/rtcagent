@@ -10,8 +10,9 @@ RTCagent is an HEP/eBPF powered observability tool for VoIP/WebRTC Applications.
 Before proceeding, learn everything you need to know about [eBPF](https://ebpf.io)
 
 <a href="https://github.com/sipcapture">
-<img src="https://github.com/sipcapture/rtcagent/assets/1423657/8a8d5057-12d0-432a-847e-80a8354825b6" height=400>
+<img src="https://github.com/sipcapture/rtcagent/assets/1423657/3869ea12-f172-40d8-9baf-5f7a82b9e09c" height=400>
 </a>
+
 
 ### Download
 Download an `amd64/x86` static build of `rtcagent` and use it immediately.
