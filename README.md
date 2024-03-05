@@ -14,7 +14,7 @@ RTCAgent greatly differs from any other previous HEP Agent in several ways:
 
 - Unlike _native agents_, it does not require any code modifications or patches
 - Unlike _passive agents_, it does not require access to network interfaces and packets
-- Unlike _any other agent_, it attaches to software functions used for _sending/receiving_ data
+- Unlike _any other agent_, it traces functions used for _sending/receiving_ data
 
 _The result is a lightweight Agent HEP able to mirror packets bypassing code integrations, encryption and complexity._
 
