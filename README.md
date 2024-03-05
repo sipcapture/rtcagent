@@ -16,7 +16,8 @@ RTCAgent greatly differs from any other previous HEP Agent in several ways:
 - Unlike _passive agents_, it does not require access to network interfaces and packets
 - Unlike _any other agent_, it traces functions used for _sending/receiving_ data
 
-_The result is a lightweight Agent HEP able to mirror packets bypassing code integrations, encryption and complexity._
+_The result is a new, lightweight and portable HEP Agent able to mirror SIP packets through eBPF hooks<br>
+from the core of supported applications bypassing manual code integrations, network encryption and complexity._
 
 <br>
 
