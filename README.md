@@ -76,7 +76,7 @@ OPTIONS:
 
 ### Build
 
-> Compatible with Linux/Android kernel versions >= **x86_64 5.**, >= **aarch64 5.5**.<br>
+> Compatible with Linux/Android kernel versions >= **x86_64 5.x**, >= **aarch64 5.5**.<br>
 > Linux only. Does not support Windows and macOS.
 
 #### Requirements 
