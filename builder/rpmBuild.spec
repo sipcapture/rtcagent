@@ -15,7 +15,7 @@ BuildRequires: clang
 %description
 SIP/TLS plaintext capture,
 
-supports kamailio, freeswitch
+supports kamailio, freeswitch, opensips
 
 %prep
 %setup -c

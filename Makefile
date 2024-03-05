@@ -189,6 +189,7 @@ BPF_NOCORE_TAG = $(subst .,_,$(KERN_RELEASE)).$(subst .,_,$(VERSION))
 TARGETS += kern/kamailio
 TARGETS += kern/freeswitch
 TARGETS += kern/tcprtt
+TARGETS += kern/opensips
 
 # Generate file name-scheme based on TARGETS
 KERN_SOURCES = ${TARGETS:=_kern.c}

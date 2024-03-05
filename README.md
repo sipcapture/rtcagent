@@ -34,6 +34,8 @@ COMMANDS:
 	help		Help about any command
 	kamailio	capture SIP messages from kamailio: recv_msg, udp_send, tcp_send.
 	tcprtt		show tcp rtt stats
+  opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
+
 
 DESCRIPTION:
 

@@ -28,67 +28,72 @@ import (
 	"bytes"
 	"debug/elf"
 	"errors"
+	"log"
 	"os"
 	"strings"
 )
 
-type FreeSwitchType uint8
+type OpensipsType uint8
 
 const (
-	FreeSwitchTypeUnknow FreeSwitchType = iota
-	FreeSwitchType5
-	FreeSwitchType4
-	FreeSwitchType3
-	FreeSwitchType2
+	OpensipsTypeUnknow OpensipsType = iota
+	OpensipsType3
+	OpensipsType2
+	OpensipsType1
 )
 
-// freeswitch
-type FreeSwitchConfig struct {
+// opensips
+type OpensipsConfig struct {
 	eConfig
-	FreeSwitchpath string         `json:"freeswitchPath"`
-	ElfType        uint8          //
-	Version        FreeSwitchType //
-	VersionInfo    string         // info
+	Opensipspath string       `json:"opensipsPath"`
+	ElfType      uint8        //
+	Version      OpensipsType //
+	VersionInfo  string       // info
 }
 
-func NewFreeSwitchConfig() *FreeSwitchConfig {
-	config := &FreeSwitchConfig{}
+func NewOpensipsConfig() *OpensipsConfig {
+	config := &OpensipsConfig{}
 	return config
 }
 
-func (this *FreeSwitchConfig) Check() error {
+func (this *OpensipsConfig) Check() error {
 
-	if this.FreeSwitchpath == "" || len(strings.TrimSpace(this.FreeSwitchpath)) <= 0 {
-		return errors.New("FreeSwitch path cant be null.")
+	if this.Opensipspath == "" || len(strings.TrimSpace(this.Opensipspath)) <= 0 {
+		return errors.New("Opensips path cant be null.")
 	}
 
-	_, e := os.Stat(this.FreeSwitchpath)
+	if this.GetNoSearch() {
+		log.Printf("RTCAGENT :: opensips. No search")
+		return nil
+	}
+
+	_, e := os.Stat(this.Opensipspath)
 	if e != nil {
 		return e
 	}
 	this.ElfType = ElfTypeBin
 
-	_elf, e := elf.Open(this.FreeSwitchpath)
+	_elf, e := elf.Open(this.Opensipspath)
 	if e != nil {
 		return e
 	}
 
 	//if funcName == "" {
-	//	return errors.New(fmt.Sprintf("cant match freeswitch 'receive_msg'function to hook with freeswitch file::%s", this.FreeSwitchpath))
+	//	return errors.New(fmt.Sprintf("cant match opensips 'receive_msg'function to hook with opensips file::%s", this.Opensipspath))
 	//}
 
-	this.Version = FreeSwitchType5
-	this.VersionInfo = "freeswitch"
+	this.Version = OpensipsType3
+	this.VersionInfo = "opensips"
 
 	found := strings.Contains("receive_msg", "COM_DATA")
 	if found {
 		roSection := _elf.Section(".rodata")
 		var buf []byte
 		buf, e = roSection.Data()
-		var ver FreeSwitchType
+		var ver OpensipsType
 		var verInfo string
 		if e == nil {
-			ver, verInfo = getFreeSwitchVer(buf)
+			ver, verInfo = getOpensipsVer(buf)
 		}
 		this.Version = ver
 		this.VersionInfo = verInfo
@@ -97,12 +102,12 @@ func (this *FreeSwitchConfig) Check() error {
 	return nil
 }
 
-func getFreeSwitchVer(buf []byte) (FreeSwitchType, string) {
+func getOpensipsVer(buf []byte) (OpensipsType, string) {
 
 	var slice [][]byte
 
 	if slice = bytes.Split(buf, []byte("\x00")); slice == nil {
-		return FreeSwitchTypeUnknow, ""
+		return OpensipsTypeUnknow, ""
 	}
 
 	length := len(slice)
@@ -118,16 +123,16 @@ func getFreeSwitchVer(buf []byte) (FreeSwitchType, string) {
 			continue
 		}
 
-		freeswitchVer := string(slice[i])
-		if strings.Contains(freeswitchVer, "freeswitch 5.") {
+		opensipsVer := string(slice[i])
+		if strings.Contains(opensipsVer, "opensips 3.") {
 			//fmt.Println(fmt.Sprintf("offset:%d, body:%s", offset, slice[i]))
-			return FreeSwitchType5, freeswitchVer
-		} else if strings.Contains(freeswitchVer, "freeswitch 4.") {
-			return FreeSwitchType4, freeswitchVer
-		} else if strings.Contains(freeswitchVer, "freeswitch 3.") {
-			return FreeSwitchType3, freeswitchVer
+			return OpensipsType3, opensipsVer
+		} else if strings.Contains(opensipsVer, "opensips 2.") {
+			return OpensipsType2, opensipsVer
+		} else if strings.Contains(opensipsVer, "opensips 1.") {
+			return OpensipsType1, opensipsVer
 		}
 		offset += len(slice[i]) + 1
 	}
-	return FreeSwitchTypeUnknow, ""
+	return OpensipsTypeUnknow, ""
 }
