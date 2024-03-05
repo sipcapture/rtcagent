@@ -30,11 +30,11 @@ USAGE:	rtcagent [flags]
 
 COMMANDS:
 
-	freeswitch	capture SIP messages from freeswitch (libsofia): t_port, su_recv
 	help		Help about any command
+	freeswitch	capture SIP messages from freeswitch (libsofia): t_port, su_recv
 	kamailio	capture SIP messages from kamailio: recv_msg, udp_send, tcp_send.
+        opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
 	tcprtt		show tcp rtt stats
-  opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
 
 
 DESCRIPTION:
