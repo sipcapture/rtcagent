@@ -145,25 +145,25 @@ func (this *MOpensipsProbe) setupManagers() error {
 		{
 			Section:          "uprobe/msg_send_udp",
 			EbpfFuncName:     "msg_send_udp",
-			AttachToFuncName: "udp_send",
+			AttachToFuncName: "proto_udp_send",
 			BinaryPath:       binaryPath,
 		},
 		{
 			Section:          "uretprobe/msg_send_udp",
 			EbpfFuncName:     "msg_ret_send_udp",
-			AttachToFuncName: "udp_send",
+			AttachToFuncName: "proto_udp_send",
 			BinaryPath:       binaryPath,
 		},
 		{
 			Section:          "uprobe/msg_send_tcp",
 			EbpfFuncName:     "msg_send_tcp",
-			AttachToFuncName: "tcp_send",
+			AttachToFuncName: "proto_tcp_send",
 			BinaryPath:       binaryPath,
 		},
 		{
 			Section:          "uretprobe/msg_send_tcp",
 			EbpfFuncName:     "msg_ret_send_tcp",
-			AttachToFuncName: "tcp_send",
+			AttachToFuncName: "proto_tcp_send",
 			BinaryPath:       binaryPath,
 		},
 	}
