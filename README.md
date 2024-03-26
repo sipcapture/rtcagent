@@ -2,19 +2,32 @@
 <img src="https://github.com/sipcapture/rtcagent/assets/1423657/e1d78a7e-cf2e-4775-9177-b0a730ba66c6" height=100>
 </a>
 
-RTCagent is an HEP/eBPF powered observability tool for VoIP/WebRTC Applications.
+> RTCagent is an HEP/eBPF powered observability tool for VoIP/WebRTC Applications.
 
 <br>
 
-### Made with eBPF
-Before proceeding, learn everything you need to know about [eBPF](https://ebpf.io)
+### About
+
+**RTCAgent** is a _next-generation **HEP Agent**_ developed using the latest **[eBPF](https://ebpf.io)** technologies.
+
+RTCAgent greatly differs from any other previous HEP Agent in several ways:
+
+- Unlike _native agents_, it does not require any code modifications or patches
+- Unlike _passive agents_, it does not require access to network interfaces and packets
+- Unlike _any other agent_, it traces functions used for _sending/receiving_ data
+
+_The result is a new, lightweight and portable HEP Agent able to mirror SIP packets through eBPF hooks<br>
+from the core of supported applications bypassing manual code integrations, network encryption and complexity._
+
+<br>
 
 <a href="https://github.com/sipcapture">
-<img src="https://github.com/sipcapture/rtcagent/assets/1423657/8a8d5057-12d0-432a-847e-80a8354825b6" height=400>
+<img src="https://github.com/sipcapture/rtcagent/assets/1423657/3869ea12-f172-40d8-9baf-5f7a82b9e09c" height=400>
 </a>
 
+
 ### Download
-Download an `amd64/x86` static build of `rtcagent` and use it immediately.
+Download an `amd64/x86` static build of `rtcagent` and use it immediately on modern kernels.
 ```bash
 curl -fsSL github.com/sipcapture/rtcagent/releases/latest/download/rtcagent -O && chmod +x rtcagent
 ```
@@ -30,11 +43,11 @@ USAGE:	rtcagent [flags]
 
 COMMANDS:
 
-	freeswitch	capture SIP messages from freeswitch (libsofia): t_port, su_recv
 	help		Help about any command
+	freeswitch	capture SIP messages from freeswitch (libsofia): t_port, su_recv
 	kamailio	capture SIP messages from kamailio: recv_msg, udp_send, tcp_send.
+        opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
 	tcprtt		show tcp rtt stats
-  opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
 
 
 DESCRIPTION:
@@ -63,7 +76,7 @@ OPTIONS:
 
 ### Build
 
-> Compatible with Linux/Android kernel versions >= **x86_64 4.18**, >= **aarch64 5.5**.<br>
+> Compatible with Linux/Android kernel versions >= **x86_64 5.x**, >= **aarch64 5.5**.<br>
 > Linux only. Does not support Windows and macOS.
 
 #### Requirements 
