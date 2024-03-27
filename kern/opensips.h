@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-
 #include "rtcagent.h"
 
 #define _SYS_SOCKET_H 1
@@ -27,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define IP6_MAX_STR_SIZE 45
 #define IP_ADDR_MAX_STR_SIZE 6 /* ip62ascii +  \0*/
 #define SS_MAXSIZE 128         /* Implementation specific max size */
-#define MAX_DATA_SIZE_SIP 1024*4
+#define MAX_DATA_SIZE_SIP 1024 * 4
 
 typedef unsigned short sa_family_t;
 
@@ -107,29 +106,50 @@ typedef union sockaddr_union
 typedef struct socket_info
 {
     int socket;
-    int gindex;             /* global index in the lists of all sockets */
-    str name;               /* name - eg.: foo.bar or 10.0.0.1 */
-    struct ip_addr address; /* ip address */
-    str address_str;        /*ip address converted to string -- optimization*/
-    str port_no_str;        /* port number converted to string -- optimization*/
-    enum si_flags flags;    /* SI_IS_IP | SI_IS_LO | SI_IS_MCAST */
+    str name;               /*!< name - eg.: foo.bar or 10.0.0.1 */
+    str tag;                /* the tag of the interface, use only in OpenSIPS ecosystem */
+    struct ip_addr address; /*!< ip address */
+    str address_str;        /*!< ip address converted to string -- optimization*/
+    unsigned short port_no; /*!< port number */
+    str port_no_str;        /*!< port number converted to string -- optimization*/
+    enum si_flags flags;    /*!< SI_IS_IP | SI_IS_LO | SI_IS_MCAST | SI_IS_ANYCAST */
+    union sockaddr_union su;
+    int proto; /*!< tcp or udp*/
+    str sock_str;
+    str adv_sock_str;
+    str tag_sock_str;
+    str adv_name_str;           /* Advertised name of this interface */
+    str adv_port_str;           /* Advertised port of this interface */
+    struct ip_addr adv_address; /* Advertised address in ip_addr form (for find_si) */
+    unsigned short adv_port;    /* optimization for grep_sock_info() */
+    unsigned short workers;
+} socket_info_t;
+
+/*
+typedef struct socket_info
+{
+    int socket;
+    int gindex;
+    str name;
+    struct ip_addr address;
+    str address_str;
+    str port_no_str;
+    enum si_flags flags;
     union sockaddr_union su;
     struct socket_info *next;
     struct socket_info *prev;
-    unsigned short port_no;          /* port number */
-    char proto;                      /* tcp or udp*/
-    char proto_pad0;                 /* padding field */
-    short proto_pad1;                /* padding field */
-    str sock_str;                    /* Socket proto, ip, and port as string */
-    struct addr_info *addr_info_lst; /* extra addresses (e.g. SCTP mh) */
-    int workers;                     /* number of worker processes for this socket */
-    int workers_tcpidx;              /* index of workers in tcp children array */
-    str sockname;                    /* socket name given in config listen value */
-    struct advertise_info useinfo;   /* details to be used in SIP msg */
-#ifdef USE_MCAST
-    str mcast; /* name of interface that should join multicast group*/
-#endif         /* USE_MCAST */
+    unsigned short port_no;
+    char proto;
+    char proto_pad0;
+    short proto_pad1;
+    str sock_str;
+    struct addr_info *addr_info_lst;
+    int workers;
+    int workers_tcpidx;
+    str sockname;
+    struct advertise_info useinfo;
 } socket_info_t;
+*/
 
 typedef struct dest_info
 {
