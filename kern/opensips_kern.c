@@ -171,7 +171,7 @@ static int process_sip_data(struct pt_regs *ctx, u64 id, enum sip_data_event_typ
     {
         dest_info_t dest;
         bpf_probe_read(&dest.to, sizeof(union sockaddr_union), data->socketun);
-        //bpf_probe_read(&dest.send_sock, sizeof(struct socket_info), data->rcvinfo);
+        // bpf_probe_read(&dest.send_sock, sizeof(struct socket_info), data->rcvinfo);
 
         u16 dst_port = su_getport(&dest.to);
         char fmt1[] = "PORT DST: %d\n";
@@ -180,7 +180,7 @@ static int process_sip_data(struct pt_regs *ctx, u64 id, enum sip_data_event_typ
         event->rcinfo.dst_port = dst_port;
         su2ip_addr(&event->rcinfo.dst_ip, &dest.to);
 
-        //data->rcvinfo = &dest.send_sock;
+        // data->rcvinfo = &dest.send_sock;
 
         u32 kZero = 0;
         struct socket_info *send_sock = bpf_map_lookup_elem(&socket_info_heap, &kZero);
@@ -301,14 +301,13 @@ SEC("uprobe/msg_send_udp")
 int msg_send_udp(struct pt_regs *ctx)
 {
     // int run_onsend(sip_msg_t *orig_msg, dest_info_t *dst, char *buf, int len)
-    //debug_bpf_printk("opensips ======================================= d\n");
+    // debug_bpf_printk("opensips ======================================= d\n");
     //  static inline int msg_send_buffer(struct dest_info *dst, char *buf, int len, int flags)
     // int udp_send(struct dest_info* dst, char *buf, unsigned len);
-    //OPENSIPS
-    //static int proto_udp_send(struct socket_info* source,
+    // OPENSIPS
+    // static int proto_udp_send(struct socket_info* source,
     // char* buf, unsigned int len, union sockaddr_union* to,
     // unsigned int id)
-
 
     u64 timestamp = bpf_ktime_get_ns();
     u64 current_pid_tgid = bpf_get_current_pid_tgid();
@@ -355,7 +354,6 @@ int msg_send_udp(struct pt_regs *ctx)
     const void *rcvinfo = (void *)PT_REGS_PARM1(ctx);
     data.rcvinfo = rcvinfo;
 
-    
     bpf_map_update_elem(&sip_hash_send, &current_pid_tgid, &data, BPF_ANY);
 
     // struct socket_info send_sock = {};
@@ -437,7 +435,7 @@ int msg_send_tcp(struct pt_regs *ctx)
     }
 #endif
 
-    u64 len = (u64)PT_REGS_PARM4(ctx);
+    u64 len = (u64)PT_REGS_PARM3(ctx);
 
     char fmt2[] = "msg_tcp_send: %lld\n";
     bpf_trace_printk(fmt2, sizeof(fmt2), timestamp);
@@ -453,8 +451,11 @@ int msg_send_tcp(struct pt_regs *ctx)
     data.timestamp = timestamp;
     data.retval = -1;
 
-    const char *buf = (const char *)PT_REGS_PARM3(ctx);
+    const char *buf = (const char *)PT_REGS_PARM2(ctx);
     data.buf = buf;
+
+    const void *socketun = (void *)PT_REGS_PARM4(ctx);
+    data.socketun = socketun;
 
     const void *rcvinfo = (void *)PT_REGS_PARM1(ctx);
     data.rcvinfo = rcvinfo;
@@ -478,9 +479,9 @@ int msg_ret_send_tcp(struct pt_regs *ctx)
     u64 current_uid_gid = bpf_get_current_uid_gid();
     u32 uid = current_uid_gid;
 
-    int len = (int)PT_REGS_RC(ctx);
-    char fmt2[] = "msg_tcp_send return: %d\n";
-    bpf_trace_printk(fmt2, sizeof(fmt2), len);
+    ////int len = (int)PT_REGS_RC(ctx);
+    // char fmt2[] = "msg_tcp_send return: %d\n";
+    // bpf_trace_printk(fmt2, sizeof(fmt2), len);
 
     struct data_t *data = bpf_map_lookup_elem(&sip_hash_send, &current_pid_tgid);
     if (!data)
