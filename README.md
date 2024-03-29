@@ -118,6 +118,7 @@ bin/rtcagent --help
 <br>
 
 ### Docker
+#### Hypervisor Mode
 ```
 rtcagent:
     privileged: true
@@ -129,6 +130,20 @@ rtcagent:
       - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
       - /sys/kernel/debug:/sys/kernel/debug:rw
     command: --cgroupfs-root=/host/sys/fs/cgroup
+```
+
+#### Attach Mode
+```
+rtcagent:
+    privileged: true
+    image: ghcr.io/sipcapture/rtcagent
+    container_name: rtcagent
+    restart: unless-stopped
+    volumes:
+      - $(docker inspect --format="{{.GraphDriver.Data.MergedDir}}" kamailio)/usr/sbin/kamailio:/kamailio:ro
+    command: /rtcagent kamailio -m /kamailio
+    depends_on:
+      - kamailio
 ```
 
 ### Credits
