@@ -117,6 +117,20 @@ bin/rtcagent --help
 
 <br>
 
+### Usage
+##### Kamailio
+```
+./rtcagent kamailio -T udp -P 9060 -S $HOMER -m /usr/sbin/kamailio
+```
+##### OpenSIPS
+```
+./rtcagent opensips -T tcp -P 9061 -S $HOMER -m /usr/sbin/opensips
+```
+##### FreeSwitch
+```
+./rtcagent freeswitch -T udp -P 9060 -S $HOMER -m /usr/sbin/freeswitch
+```
+
 ### Docker
 #### Hypervisor Mode
 ```
