@@ -118,6 +118,7 @@ bin/rtcagent --help
 <br>
 
 ### Usage
+Run `rtcagent` on a native host attaching to a local binary target
 ##### Kamailio
 ```
 ./rtcagent kamailio -T udp -P 9060 -S $HOMER -m /usr/sbin/kamailio
@@ -133,6 +134,7 @@ bin/rtcagent --help
 
 ### Docker
 #### Hypervisor Mode
+Run `rtcagent` as a priviledged container on your host attaching to a local binary target
 ```
 rtcagent:
     privileged: true
@@ -146,7 +148,8 @@ rtcagent:
     command: --cgroupfs-root=/host/sys/fs/cgroup
 ```
 
-#### Attach Mode
+#### Cross-Container Mode
+Run `rtcagent` as a priviledged container attached to a target container via docker volume mounts
 ##### Kamailio
 ```
 rtcagent:
