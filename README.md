@@ -133,6 +133,7 @@ rtcagent:
 ```
 
 #### Attach Mode
+##### Kamailio
 ```
 rtcagent:
     privileged: true
@@ -145,6 +146,20 @@ rtcagent:
     depends_on:
       - kamailio
 ```
+##### OpenSIPS
+```
+rtcagent:
+    privileged: true
+    image: ghcr.io/sipcapture/rtcagent
+    container_name: rtcagent
+    restart: unless-stopped
+    volumes:
+      - $(docker inspect --format="{{.GraphDriver.Data.MergedDir}}" opensips)/usr/sbin/opensips:/opensips:ro
+    command: /rtcagent opensips -m /opensips
+    depends_on:
+      - opensips
+```
+
 
 ### Credits
 
