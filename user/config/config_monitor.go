@@ -38,6 +38,8 @@ const (
 type MonitorConfig struct {
 	eConfig
 	Monitorpath string      `json:"tcprttPath"`
+	SysCall     bool        //
+	UserCall    bool        //
 	ElfType     uint8       //
 	Version     MonitorType //
 	VersionInfo string      // info

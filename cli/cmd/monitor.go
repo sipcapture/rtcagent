@@ -48,7 +48,10 @@ var monitorCmd = &cobra.Command{
 }
 
 func init() {
-	monitorCmd.PersistentFlags().StringVarP(&monitorConfig.Monitorpath, "monitor", "m", "", "monitor binary file path, use to hook")
+	monitorCmd.PersistentFlags().StringVarP(&monitorConfig.Monitorpath, "binary", "b", "", "monitor binary file path, use to hook")
+	monitorCmd.PersistentFlags().BoolVarP(&monitorConfig.SysCall, "syscall", "s", false, "monitor syscall")
+	monitorCmd.PersistentFlags().BoolVarP(&monitorConfig.UserCall, "usercall", "c", false, "monitor usercall")
+
 	rootCmd.AddCommand(monitorCmd)
 }
 

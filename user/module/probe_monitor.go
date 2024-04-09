@@ -67,7 +67,7 @@ func (this *MMonitorProbe) Start() error {
 }
 
 type monitorBpfPrograms struct {
-	MonitorClose *ebpf.Program `ebpf:"tcp_close"`
+	MonitorClose *ebpf.Program `ebpf:"raw_tracepoint_sys_enter"`
 }
 
 type monitorBpfMaps struct {
@@ -93,7 +93,7 @@ func (this *MMonitorProbe) start() error {
 		return fmt.Errorf("couldn't find asset %v.", err)
 	}
 
-	objs := bpfObjects{}
+	objs := monitorBpfObjects{}
 
 	reader := bytes.NewReader(byteBuf)
 	spec, err := ebpf.LoadCollectionSpecFromReader(reader)
@@ -106,16 +106,17 @@ func (this *MMonitorProbe) start() error {
 		return fmt.Errorf("couldn't find asset %v.", err)
 	}
 
-	this.linkData, err = link.AttachTracing(link.TracingOptions{
-		Program: objs.bpfPrograms.TcpClose,
+	this.linkData, err = link.AttachRawTracepoint(link.RawTracepointOptions{
+		Name:    "sys_enter",
+		Program: objs.monitorBpfPrograms.MonitorClose,
 	})
 	if err != nil {
 		this.logger.Printf("%s\tBPF bytecode filename FATAL: [%s]\n", this.Name(), bpfFileName)
 		log.Fatal(err)
 	}
 
-	this.eventMaps = append(this.eventMaps, objs.bpfMaps.Events)
-	this.eventFuncMaps[objs.bpfMaps.Events] = &event.MonitorEvent{}
+	this.eventMaps = append(this.eventMaps, objs.monitorBpfMaps.Events)
+	this.eventFuncMaps[objs.monitorBpfMaps.Events] = &event.MonitorEvent{}
 
 	err = this.initDecodeFun()
 	if err != nil {
@@ -141,10 +142,16 @@ func (this *MMonitorProbe) setupManagers() error {
 	versionInfo := this.conf.(*config.MonitorConfig).VersionInfo
 
 	var probes = []*manager.Probe{
+
 		{
 			Section:          "fentry/tcp_close",
-			EbpfFuncName:     `ebpf:"tcp_close"`,
-			AttachToFuncName: `ebpf:"tcp_close"`,
+			EbpfFuncName:     `ebpf:"tcp_close2"`,
+			AttachToFuncName: `ebpf:"tcp_close2"`,
+		},
+		{
+			Section:          "raw_tracepoint/sys_enter",
+			EbpfFuncName:     `ebpf:"raw_tracepoint_sys_enter"`,
+			AttachToFuncName: `ebpf:"raw_tracepoint_sys_enter"`,
 		},
 	}
 

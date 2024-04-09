@@ -28,7 +28,7 @@ import (
 	"fmt"
 )
 
-type MonitorEvent struct {
+type MonitorSysCallEvent struct {
 	Sport uint16 `json:"sport"`
 	Dport uint16 `json:"dport"`
 	Saddr uint32 `json:"saddr"`
@@ -36,24 +36,36 @@ type MonitorEvent struct {
 	SRTT  uint32 `json:"srtt"`
 }
 
+type MonitorEvent struct {
+	event_type EventType
+	DataType   int64    `json:"dataType"`
+	Timestamp  uint64   `json:"timestamp"`
+	Pid        uint32   `json:"pid"`
+	Tid        uint32   `json:"tid"`
+	SysCallId  uint64   `json:"syscall_id"`
+	Comm       [16]byte `json:"Comm"`
+}
+
 func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 
 	buf := bytes.NewBuffer(payload)
 
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Sport); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.DataType); err != nil {
 		return
 	}
-
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Dport); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Timestamp); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Saddr); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Pid); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Daddr); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Tid); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SRTT); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysCallId); err != nil {
+		return
+	}
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Comm); err != nil {
 		return
 	}
 
@@ -61,7 +73,7 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 }
 
 func (tcpev *MonitorEvent) GetUUID() string {
-	return fmt.Sprintf("%d_%d", tcpev.Sport, tcpev.Dport)
+	return fmt.Sprintf("%d_%d", tcpev.Pid, tcpev.Tid)
 }
 
 func (tcpev *MonitorEvent) Payload() []byte {
@@ -87,13 +99,34 @@ func (tcpev *MonitorEvent) StringHex() string {
 
 func (tcpev *MonitorEvent) String() string {
 	//addr := tcpev.module.(*module.MOpenSSLProbe).GetConn(tcpev.Pid, tcpev.Fd)
-
-	srcIP := intToIP(tcpev.Saddr)
-	dstIP := intToIP(tcpev.Daddr)
-
 	prefix := COLORGREEN
 
-	s := fmt.Sprintf("%s%-15s %-6d -> %-15s %-6d %-6d%s", prefix, srcIP, tcpev.Sport, dstIP, tcpev.Dport, tcpev.SRTT, COLORRESET)
+	funcName := "unknown"
+	if tcpev.SysCallId == 1 {
+		funcName = "write"
+	} else if tcpev.SysCallId == 2 {
+		funcName = "open"
+	} else if tcpev.SysCallId == 3 {
+		funcName = "read"
+	} else if tcpev.SysCallId == 15 {
+		funcName = "chown"
+	} else if tcpev.SysCallId == 21 {
+		funcName = "access"
+	} else if tcpev.SysCallId == 23 {
+		funcName = "truncate"
+	} else if tcpev.SysCallId == 62 {
+		funcName = "sys_kill"
+	} else if tcpev.SysCallId == 34 {
+		funcName = "pause"
+	} else if tcpev.SysCallId == 128 {
+		funcName = "rt_sigtimedwait"
+	} else if tcpev.SysCallId == 232 {
+		funcName = "epoll_wait"
+	} else if tcpev.SysCallId == 281 {
+		funcName = "futex"
+	}
+
+	s := fmt.Sprintf("%s %d %d %d %s %d %s %d ns %s", prefix, tcpev.DataType, tcpev.Pid, tcpev.Tid, string(tcpev.Comm[:]), tcpev.SysCallId, funcName, 0, COLORRESET)
 	return s
 }
 
