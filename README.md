@@ -48,12 +48,13 @@ COMMANDS:
 	kamailio	capture SIP messages from kamailio: recv_msg, udp_send, tcp_send.
         opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
 	tcprtt		show tcp rtt stats
+  monitor		show advanced monitor statistics
 
 
 DESCRIPTION:
 
 	RTCAgent is a tool that can capture and trace SIP packets using eBPF hooks and HEP
-	
+
 	Usage:
 	  rtcagent <command> -h
 
