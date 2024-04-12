@@ -24,6 +24,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package config
 
+import (
+	"errors"
+	"log"
+	"os"
+	"strings"
+)
+
 type MonitorType uint8
 
 const (
@@ -37,7 +44,7 @@ const (
 // tcprtt
 type MonitorConfig struct {
 	eConfig
-	Monitorpath string      `json:"tcprttPath"`
+	Monitorpath string      `json:"monitPath"`
 	SysCall     bool        //
 	UserCall    bool        //
 	ElfType     uint8       //
@@ -52,8 +59,29 @@ func NewMonitorConfig() *MonitorConfig {
 
 func (this *MonitorConfig) Check() error {
 
+	if this.Monitorpath == "" || len(strings.TrimSpace(this.Monitorpath)) <= 0 {
+		return errors.New("binary path cant be null.")
+	}
+
+	if this.GetNoSearch() {
+		log.Printf("RTCAGENT :: binary. No search")
+		return nil
+	}
+
+	_, e := os.Stat(this.Monitorpath)
+	if e != nil {
+		return e
+	}
+	this.ElfType = ElfTypeBin
+
+	/*_elf, e := elf.Open(this.Monitorpath)
+	if e != nil {
+		return e
+	}
+	*/
+
 	//if funcName == "" {
-	//	return errors.New(fmt.Sprintf("cant match tcprtt 'receive_msg'function to hook with tcprtt file::%s", this.Monitorpath))
+	//	return errors.New(fmt.Sprintf("cant match opensips 'receive_msg'function to hook with opensips file::%s", this.Opensipspath))
 	//}
 
 	return nil

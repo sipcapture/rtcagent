@@ -27,17 +27,19 @@ package module
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"rtcagent/assets"
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 
+	manager "github.com/adubovikov/ebpfmanager"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
-	manager "github.com/gojue/ebpfmanager"
 	"golang.org/x/sys/unix"
 )
 
@@ -66,8 +68,10 @@ func (this *MMonitorProbe) Start() error {
 	return nil
 }
 
+/*
 type monitorBpfPrograms struct {
-	MonitorClose *ebpf.Program `ebpf:"raw_tracepoint_sys_enter"`
+	MonitorEnter *ebpf.Program `ebpf:"raw_tracepoint_sys_enter"`
+	MonitorClose *ebpf.Program `ebpf:"raw_tracepoint_sys_exit"`
 }
 
 type monitorBpfMaps struct {
@@ -77,6 +81,7 @@ type monitorBpfObjects struct {
 	monitorBpfPrograms
 	monitorBpfMaps
 }
+*/
 
 func (this *MMonitorProbe) start() error {
 
@@ -93,30 +98,48 @@ func (this *MMonitorProbe) start() error {
 		return fmt.Errorf("couldn't find asset %v.", err)
 	}
 
-	objs := monitorBpfObjects{}
-
-	reader := bytes.NewReader(byteBuf)
-	spec, err := ebpf.LoadCollectionSpecFromReader(reader)
+	// setup the managers
+	err = this.setupManagers()
 	if err != nil {
-		return fmt.Errorf("can't load bpf: %w", err)
+		return fmt.Errorf("kamailio module couldn't find binPath %v.", err)
 	}
 
-	err = spec.LoadAndAssign(&objs, nil)
-	if err != nil {
-		return fmt.Errorf("couldn't find asset %v.", err)
+	// initialize the bootstrap manager
+	if err = this.bpfManager.InitWithOptions(bytes.NewReader(byteBuf), this.bpfManagerOptions); err != nil {
+		return fmt.Errorf("couldn't init manager %v", err)
 	}
 
-	this.linkData, err = link.AttachRawTracepoint(link.RawTracepointOptions{
-		Name:    "sys_enter",
-		Program: objs.monitorBpfPrograms.MonitorClose,
-	})
-	if err != nil {
-		this.logger.Printf("%s\tBPF bytecode filename FATAL: [%s]\n", this.Name(), bpfFileName)
-		log.Fatal(err)
+	// start the bootstrap manager
+	if err = this.bpfManager.Start(); err != nil {
+		return fmt.Errorf("couldn't start bootstrap manager %v", err)
 	}
 
-	this.eventMaps = append(this.eventMaps, objs.monitorBpfMaps.Events)
-	this.eventFuncMaps[objs.monitorBpfMaps.Events] = &event.MonitorEvent{}
+	/*
+		objs := monitorBpfObjects{}
+
+		reader := bytes.NewReader(byteBuf)
+		spec, err := ebpf.LoadCollectionSpecFromReader(reader)
+		if err != nil {
+			return fmt.Errorf("can't load bpf: %w", err)
+		}
+
+		err = spec.LoadAndAssign(&objs, nil)
+		if err != nil {
+			return fmt.Errorf("couldn't find asset %v.", err)
+		}
+
+		this.linkData, err = link.AttachRawTracepoint(link.RawTracepointOptions{
+			Name:    "sys_enter",
+			Program: objs.monitorBpfPrograms.MonitorClose,
+		})
+		if err != nil {
+			this.logger.Printf("%s\tBPF bytecode filename FATAL: [%s]\n", this.Name(), bpfFileName)
+			log.Fatal(err)
+		}
+
+		this.eventMaps = append(this.eventMaps, objs.monitorBpfMaps.Events)
+		this.eventFuncMaps[objs.monitorBpfMaps.Events] = &event.MonitorEvent{}
+	*/
 
 	err = this.initDecodeFun()
 	if err != nil {
@@ -140,19 +163,56 @@ func (this *MMonitorProbe) setupManagers() error {
 
 	version := this.conf.(*config.MonitorConfig).Version
 	versionInfo := this.conf.(*config.MonitorConfig).VersionInfo
+	syscall := this.conf.(*config.MonitorConfig).SysCall
+	usercall := this.conf.(*config.MonitorConfig).UserCall
 
-	var probes = []*manager.Probe{
+	switch this.conf.(*config.MonitorConfig).ElfType {
+	case config.ElfTypeBin:
+		binaryPath = this.conf.(*config.MonitorConfig).Monitorpath
+	default:
+		binaryPath = "/usr/sbin/kamailio"
+	}
 
-		{
-			Section:          "fentry/tcp_close",
-			EbpfFuncName:     `ebpf:"tcp_close2"`,
-			AttachToFuncName: `ebpf:"tcp_close2"`,
-		},
-		{
-			Section:          "raw_tracepoint/sys_enter",
-			EbpfFuncName:     `ebpf:"raw_tracepoint_sys_enter"`,
-			AttachToFuncName: `ebpf:"raw_tracepoint_sys_enter"`,
-		},
+	//objdump -T /usr/sbin/kamailio |grep receive_msg
+	//0000000000174c30 g    DF .text	000000000000541f  Base        receive_msg
+
+	if !this.conf.(*config.MonitorConfig).GetNoSearch() {
+		_, err := os.Stat(binaryPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	var probes = []*manager.Probe{}
+
+	if syscall {
+		probes = append(probes, &manager.Probe{
+			Section:      "raw_tracepoint/sys_enter",
+			EbpfFuncName: "raw_tracepoint_sys_enter",
+		})
+
+		probes = append(probes, &manager.Probe{
+			Section:      "raw_tracepoint/sys_exit",
+			EbpfFuncName: "raw_tracepoint_sys_exit",
+		})
+	} else if usercall {
+
+		probes = append(probes, &manager.Probe{
+			Section:          "uprobe/user_function",
+			EbpfFuncName:     "user_function",
+			AttachToFuncName: "receive_msg",
+			BinaryPath:       binaryPath,
+			Cookie:           0x1,
+		})
+
+		probes = append(probes, &manager.Probe{
+			Section:          "uretprobe/user_function",
+			EbpfFuncName:     "user_ret_function",
+			AttachToFuncName: "receive_msg",
+			BinaryPath:       binaryPath,
+			Cookie:           0x2,
+		})
+
 	}
 
 	this.bpfManager = &manager.Manager{
@@ -189,6 +249,20 @@ func (this *MMonitorProbe) DecodeFun(em *ebpf.Map) (event.IEventStruct, bool) {
 }
 
 func (this *MMonitorProbe) initDecodeFun() error {
+
+	monitorEventsMap, found, err := this.bpfManager.GetMap("events")
+
+	this.logger.Printf("====> BPF bytecode filename: [%v]\n", found)
+
+	if err != nil {
+		this.logger.Printf("====> ERRROR BPF bytecode filename: [%]\n", err.Error())
+		return err
+	}
+	if !found {
+		return errors.New("cant found map:events")
+	}
+	this.eventMaps = append(this.eventMaps, monitorEventsMap)
+	this.eventFuncMaps[monitorEventsMap] = &event.MonitorEvent{}
 
 	prefix := event.COLORCYAN
 

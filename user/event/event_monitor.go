@@ -37,22 +37,22 @@ type MonitorSysCallEvent struct {
 }
 
 type MonitorEvent struct {
-	event_type EventType
-	DataType   int64    `json:"dataType"`
-	Timestamp  uint64   `json:"timestamp"`
-	Pid        uint32   `json:"pid"`
-	Tid        uint32   `json:"tid"`
-	SysCallId  uint64   `json:"syscall_id"`
-	Comm       [16]byte `json:"Comm"`
+	Timestamp     uint64   `json:"timestamp"`
+	Pid           uint32   `json:"pid"`
+	Tid           uint32   `json:"tid"`
+	SysCallId     uint32   `json:"syscall_id"`
+	Latency       uint32   `json:"latency"`
+	Comm          [16]byte `json:"Comm"`
+	NrCpusAllowed uint32   `json:"nr_cpus_allowed"`
+	RecentUsedCpu uint32   `json:"recent_used_cpu"`
+	ExitCode      uint32   `json:"exit_code"`
+	Cookie        uint64   `json:"cookie"`
 }
 
 func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 
 	buf := bytes.NewBuffer(payload)
 
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.DataType); err != nil {
-		return
-	}
 	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Timestamp); err != nil {
 		return
 	}
@@ -65,7 +65,22 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysCallId); err != nil {
 		return
 	}
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Latency); err != nil {
+		return
+	}
 	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Comm); err != nil {
+		return
+	}
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.NrCpusAllowed); err != nil {
+		return
+	}
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.RecentUsedCpu); err != nil {
+		return
+	}
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.ExitCode); err != nil {
+		return
+	}
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Cookie); err != nil {
 		return
 	}
 
@@ -102,6 +117,7 @@ func (tcpev *MonitorEvent) String() string {
 	prefix := COLORGREEN
 
 	funcName := "unknown"
+
 	if tcpev.SysCallId == 1 {
 		funcName = "write"
 	} else if tcpev.SysCallId == 2 {
@@ -126,7 +142,14 @@ func (tcpev *MonitorEvent) String() string {
 		funcName = "futex"
 	}
 
-	s := fmt.Sprintf("%s %d %d %d %s %d %s %d ns %s", prefix, tcpev.DataType, tcpev.Pid, tcpev.Tid, string(tcpev.Comm[:]), tcpev.SysCallId, funcName, 0, COLORRESET)
+	if tcpev.Cookie == 0x2 {
+		funcName = "receive_msg (ret)"
+
+	}
+
+	s := fmt.Sprintf("%s Time: %d Pid: %d Tid: %d Comm: [%s] SysID: %d Func:%s Time Latency: %d ns, Max Cpu: %d, Recent CPU: %d, Exit Code: %d, Cookie: %d %s", prefix,
+		tcpev.Timestamp, tcpev.Pid, tcpev.Tid, string(tcpev.Comm[:]), tcpev.SysCallId, funcName, tcpev.Latency, tcpev.NrCpusAllowed, tcpev.RecentUsedCpu, tcpev.ExitCode, tcpev.Cookie,
+		COLORRESET)
 	return s
 }
 
