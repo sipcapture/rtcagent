@@ -123,3 +123,8 @@ func (tcpev *TcprttEvent) Clone() IEventStruct {
 func (tcpev *TcprttEvent) EventType() EventType {
 	return 0
 }
+
+func (tcpev *TcprttEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	return false
+}

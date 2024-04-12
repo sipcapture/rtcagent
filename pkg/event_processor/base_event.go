@@ -191,6 +191,11 @@ func (be *BaseEvent) EventType() event.EventType {
 	return be.event_type
 }
 
+func (be *BaseEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	return false
+}
+
 func CToGoString(c []byte) string {
 	n := -1
 	for i, b := range c {

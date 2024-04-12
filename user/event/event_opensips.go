@@ -219,3 +219,8 @@ func (kem *OpensipsEvent) Clone() IEventStruct {
 func (kem *OpensipsEvent) EventType() EventType {
 	return kem.event_type
 }
+
+func (kem *OpensipsEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	return false
+}

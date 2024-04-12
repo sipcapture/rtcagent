@@ -200,6 +200,7 @@ func (this *Module) perfEventReader(errChan chan error, em *ebpf.Map) {
 		errChan <- fmt.Errorf("creating %s reader dns: %s", em.String(), err)
 		return
 	}
+
 	this.reader = append(this.reader, rd)
 	go func() {
 		for {
@@ -232,7 +233,7 @@ func (this *Module) perfEventReader(errChan chan error, em *ebpf.Map) {
 			}
 
 			//
-			this.Dispatcher(e)
+			this.child.Dispatcher(e)
 		}
 	}()
 }
@@ -243,6 +244,7 @@ func (this *Module) ringbufEventReader(errChan chan error, em *ebpf.Map) {
 		errChan <- fmt.Errorf("%s\tcreating %s reader dns: %s", this.child.Name(), em.String(), err)
 		return
 	}
+
 	this.reader = append(this.reader, rd)
 	go func() {
 		for {
@@ -293,8 +295,10 @@ func (this *Module) Decode(em *ebpf.Map, b []byte) (event event.IEventStruct, er
 }
 
 func (this *Module) Dispatcher(e event.IEventStruct) {
+
 	switch e.EventType() {
 	case event.EventTypeOutput:
+
 		if this.conf.GetHex() {
 			this.logger.Println(e.StringHex())
 		} else {

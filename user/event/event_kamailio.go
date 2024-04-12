@@ -256,3 +256,7 @@ func (kem *KamailioEvent) Clone() IEventStruct {
 func (kem *KamailioEvent) EventType() EventType {
 	return kem.event_type
 }
+
+func (kem *KamailioEvent) DoCorrelation(userFunctionArray []string) bool {
+	return false
+}

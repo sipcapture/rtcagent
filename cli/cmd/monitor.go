@@ -51,6 +51,7 @@ func init() {
 	monitorCmd.PersistentFlags().StringVarP(&monitorConfig.Monitorpath, "binary", "b", "", "monitor binary file path, use to hook")
 	monitorCmd.PersistentFlags().BoolVarP(&monitorConfig.SysCall, "syscall", "s", false, "monitor syscall")
 	monitorCmd.PersistentFlags().BoolVarP(&monitorConfig.UserCall, "usercall", "c", false, "monitor usercall")
+	monitorCmd.PersistentFlags().StringSliceVarP(&monitorConfig.UserFunctions, "functions", "f", nil, "monitor user functions")
 
 	rootCmd.AddCommand(monitorCmd)
 }

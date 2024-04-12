@@ -216,3 +216,8 @@ func (kem *FreeSwitchEvent) Clone() IEventStruct {
 func (kem *FreeSwitchEvent) EventType() EventType {
 	return kem.event_type
 }
+
+func (kem *FreeSwitchEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	return false
+}

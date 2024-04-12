@@ -47,6 +47,7 @@ type MonitorEvent struct {
 	RecentUsedCpu uint32   `json:"recent_used_cpu"`
 	ExitCode      uint32   `json:"exit_code"`
 	Cookie        uint64   `json:"cookie"`
+	funcName      string   `json:"func_name"`
 }
 
 func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
@@ -87,6 +88,41 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 	return nil
 }
 
+func (tcpev *MonitorEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	tcpev.funcName = "unknown"
+
+	if tcpev.SysCallId == 1 {
+		tcpev.funcName = "write"
+	} else if tcpev.SysCallId == 2 {
+		tcpev.funcName = "open"
+	} else if tcpev.SysCallId == 3 {
+		tcpev.funcName = "read"
+	} else if tcpev.SysCallId == 15 {
+		tcpev.funcName = "chown"
+	} else if tcpev.SysCallId == 21 {
+		tcpev.funcName = "access"
+	} else if tcpev.SysCallId == 23 {
+		tcpev.funcName = "truncate"
+	} else if tcpev.SysCallId == 62 {
+		tcpev.funcName = "sys_kill"
+	} else if tcpev.SysCallId == 34 {
+		tcpev.funcName = "pause"
+	} else if tcpev.SysCallId == 128 {
+		tcpev.funcName = "rt_sigtimedwait"
+	} else if tcpev.SysCallId == 232 {
+		tcpev.funcName = "epoll_wait"
+	} else if tcpev.SysCallId == 281 {
+		tcpev.funcName = "futex"
+	}
+
+	if int(tcpev.Cookie) > 0 && int(tcpev.Cookie) <= len(userFunctionArray) {
+		tcpev.funcName = userFunctionArray[tcpev.Cookie-1]
+	}
+
+	return false
+}
+
 func (tcpev *MonitorEvent) GetUUID() string {
 	return fmt.Sprintf("%d_%d", tcpev.Pid, tcpev.Tid)
 }
@@ -116,39 +152,8 @@ func (tcpev *MonitorEvent) String() string {
 	//addr := tcpev.module.(*module.MOpenSSLProbe).GetConn(tcpev.Pid, tcpev.Fd)
 	prefix := COLORGREEN
 
-	funcName := "unknown"
-
-	if tcpev.SysCallId == 1 {
-		funcName = "write"
-	} else if tcpev.SysCallId == 2 {
-		funcName = "open"
-	} else if tcpev.SysCallId == 3 {
-		funcName = "read"
-	} else if tcpev.SysCallId == 15 {
-		funcName = "chown"
-	} else if tcpev.SysCallId == 21 {
-		funcName = "access"
-	} else if tcpev.SysCallId == 23 {
-		funcName = "truncate"
-	} else if tcpev.SysCallId == 62 {
-		funcName = "sys_kill"
-	} else if tcpev.SysCallId == 34 {
-		funcName = "pause"
-	} else if tcpev.SysCallId == 128 {
-		funcName = "rt_sigtimedwait"
-	} else if tcpev.SysCallId == 232 {
-		funcName = "epoll_wait"
-	} else if tcpev.SysCallId == 281 {
-		funcName = "futex"
-	}
-
-	if tcpev.Cookie == 0x2 {
-		funcName = "receive_msg (ret)"
-
-	}
-
 	s := fmt.Sprintf("%s Time: %d Pid: %d Tid: %d Comm: [%s] SysID: %d Func:%s Time Latency: %d ns, Max Cpu: %d, Recent CPU: %d, Exit Code: %d, Cookie: %d %s", prefix,
-		tcpev.Timestamp, tcpev.Pid, tcpev.Tid, string(tcpev.Comm[:]), tcpev.SysCallId, funcName, tcpev.Latency, tcpev.NrCpusAllowed, tcpev.RecentUsedCpu, tcpev.ExitCode, tcpev.Cookie,
+		tcpev.Timestamp, tcpev.Pid, tcpev.Tid, string(tcpev.Comm[:]), tcpev.SysCallId, tcpev.funcName, tcpev.Latency, tcpev.NrCpusAllowed, tcpev.RecentUsedCpu, tcpev.ExitCode, tcpev.Cookie,
 		COLORRESET)
 	return s
 }

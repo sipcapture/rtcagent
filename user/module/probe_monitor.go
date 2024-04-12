@@ -50,14 +50,17 @@ type MMonitorProbe struct {
 	eventFuncMaps     map[*ebpf.Map]event.IEventStruct
 	eventMaps         []*ebpf.Map
 	linkData          link.Link
+	userFunctionArray []string
 }
 
 func (this *MMonitorProbe) Init(ctx context.Context, logger *log.Logger, conf config.IConfig) error {
+
 	this.Module.Init(ctx, logger, conf)
 	this.conf = conf
 	this.Module.SetChild(this)
 	this.eventMaps = make([]*ebpf.Map, 0, 2)
 	this.eventFuncMaps = make(map[*ebpf.Map]event.IEventStruct)
+	this.userFunctionArray = make([]string, 0, 100)
 	return nil
 }
 
@@ -165,6 +168,7 @@ func (this *MMonitorProbe) setupManagers() error {
 	versionInfo := this.conf.(*config.MonitorConfig).VersionInfo
 	syscall := this.conf.(*config.MonitorConfig).SysCall
 	usercall := this.conf.(*config.MonitorConfig).UserCall
+	userFunction := this.conf.(*config.MonitorConfig).UserFunctions
 
 	switch this.conf.(*config.MonitorConfig).ElfType {
 	case config.ElfTypeBin:
@@ -197,22 +201,28 @@ func (this *MMonitorProbe) setupManagers() error {
 		})
 	} else if usercall {
 
-		probes = append(probes, &manager.Probe{
-			Section:          "uprobe/user_function",
-			EbpfFuncName:     "user_function",
-			AttachToFuncName: "receive_msg",
-			BinaryPath:       binaryPath,
-			Cookie:           0x1,
-		})
+		if len(userFunction) == 0 {
+			userFunction = append(userFunction, "receive_msg")
+		}
 
-		probes = append(probes, &manager.Probe{
-			Section:          "uretprobe/user_function",
-			EbpfFuncName:     "user_ret_function",
-			AttachToFuncName: "receive_msg",
-			BinaryPath:       binaryPath,
-			Cookie:           0x2,
-		})
+		this.userFunctionArray = append(this.userFunctionArray, userFunction...)
 
+		for index, userFunction := range this.userFunctionArray {
+			probes = append(probes, &manager.Probe{
+				Section:          "uprobe/user_function",
+				EbpfFuncName:     "user_function",
+				AttachToFuncName: userFunction,
+				BinaryPath:       binaryPath,
+				Cookie:           uint64(index + 1),
+			})
+			probes = append(probes, &manager.Probe{
+				Section:          "uretprobe/user_function",
+				EbpfFuncName:     "user_ret_function",
+				AttachToFuncName: userFunction,
+				BinaryPath:       binaryPath,
+				Cookie:           uint64(index + 1),
+			})
+		}
 	}
 
 	this.bpfManager = &manager.Manager{
@@ -266,13 +276,34 @@ func (this *MMonitorProbe) initDecodeFun() error {
 
 	prefix := event.COLORCYAN
 
-	this.logger.Printf("%s%-15s %-6s -> %-15s %-6s %-6s%s", prefix, "Src addr", "Port", "Dest addr", "Port", "RTT", event.COLORRESET)
+	//Src addr        Port   -> Dest addr       Port   RTT
+	//monitor_2024/04/12 22:43:22  Time: 268211073705288 Pid: 1525079 Tid: 1525079 Comm: [kamailio] SysID: 100 Func:receive_msg Time Latency: 603834 ns, Max Cpu: 16, Recent CPU: 1, Exit Code: 0, Cookie: 1
+
+	this.logger.Printf("%s%-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s %s", prefix, "Time", "Pid", "Tid", "Comm", "SysID", "Func", "Latency", "Max Cpu", "Recent Cpu", "Exit Code", "Cookie", event.COLORRESET)
 
 	return nil
 }
 
 func (this *MMonitorProbe) Events() []*ebpf.Map {
 	return this.eventMaps
+}
+
+func (this *MMonitorProbe) Dispatcher(e event.IEventStruct) {
+
+	switch e.EventType() {
+	case event.EventTypeOutput:
+		if this.conf.GetHex() {
+			this.logger.Println(e.StringHex())
+		} else {
+			e.DoCorrelation(this.userFunctionArray)
+			this.logger.Println(e.String())
+		}
+	case event.EventTypeEventProcessor:
+		this.processor.Write(e)
+	case event.EventTypeModuleData:
+		// Save to cache
+		this.child.Dispatcher(e)
+	}
 }
 
 func init() {

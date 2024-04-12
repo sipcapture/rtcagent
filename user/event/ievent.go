@@ -38,6 +38,7 @@ type IEventStruct interface {
 	PayloadLen() int
 	GenerateHEP() ([]byte, error)
 	String() string
+	DoCorrelation(userFunctionArray []string) bool
 	SendHep() bool
 	StringHex() string
 	Clone() IEventStruct
