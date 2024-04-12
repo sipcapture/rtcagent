@@ -52,6 +52,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
  * needing to call bpf_probe_read*().
  */
 
+//packed to avoid padding because the layout of the struct is significant
 #pragma pack(push, 1)
 
 struct data_t
