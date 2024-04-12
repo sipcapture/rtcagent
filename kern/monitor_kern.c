@@ -290,10 +290,6 @@ int user_function(struct pt_regs *ctx)
 	bpf_printk("user_function function call: %s; PID = : %d, Time: %d\n", comm, pid, timestamp);
 	bpf_printk("user_function ptr: Sys: %d, Time: %d\n", ptr->syscall_id, ptr->starttime_ns);
 
-	u64 ip = PT_REGS_IP(ctx);
-	const char fmt_str[] = "user function fp %lld ip %lld, sp: %lld\n";
-	bpf_trace_printk(fmt_str, sizeof(fmt_str), (void *)PT_REGS_FP(ctx), ip, (void *)PT_REGS_SP(ctx));
-
 	return 0;
 }
 
@@ -318,17 +314,9 @@ int user_ret_function(struct pt_regs *ctx)
 		return 1;
 	}
 
-	const char *pathname;
-	char buf[64];
-	bpf_probe_read(&pathname, sizeof(pathname), &ctx->si);
-	bpf_probe_read_str(buf, sizeof(buf), pathname);
-
-
-	u64 ip = PT_REGS_IP(ctx);
-	const char fmt_str[] = "return function fp %lld ip %lld\n";
-	bpf_trace_printk(fmt_str, sizeof(fmt_str), (void *)PT_REGS_FP(ctx), ip);
-
-	bpf_printk("user_ret_function call: %s\n", buf);
+	//u64 ip = PT_REGS_IP(ctx);
+	//const char fmt_str[] = "return function fp %lld ip %lld\n";
+	//bpf_trace_printk(fmt_str, sizeof(fmt_str), (void *)PT_REGS_FP(ctx), ip);
 
 	u64 current_pid_tgid = bpf_get_current_pid_tgid();
 	u32 pid = current_pid_tgid >> 32;
