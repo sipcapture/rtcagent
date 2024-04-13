@@ -71,10 +71,9 @@ func (this *MMonitorProbe) Start() error {
 	return nil
 }
 
-/*
 type monitorBpfPrograms struct {
-	MonitorEnter *ebpf.Program `ebpf:"raw_tracepoint_sys_enter"`
-	MonitorClose *ebpf.Program `ebpf:"raw_tracepoint_sys_exit"`
+	MonitorEnter *ebpf.Program `ebpf:"tcp_rcv_state_process"`
+	MonitorClose *ebpf.Program `ebpf:"tcp_v4_connect"`
 }
 
 type monitorBpfMaps struct {
@@ -84,7 +83,6 @@ type monitorBpfObjects struct {
 	monitorBpfPrograms
 	monitorBpfMaps
 }
-*/
 
 func (this *MMonitorProbe) start() error {
 
@@ -101,23 +99,9 @@ func (this *MMonitorProbe) start() error {
 		return fmt.Errorf("couldn't find asset %v.", err)
 	}
 
-	// setup the managers
-	err = this.setupManagers()
-	if err != nil {
-		return fmt.Errorf("kamailio module couldn't find binPath %v.", err)
-	}
+	networkLatency := this.conf.(*config.MonitorConfig).NetworkLatency
 
-	// initialize the bootstrap manager
-	if err = this.bpfManager.InitWithOptions(bytes.NewReader(byteBuf), this.bpfManagerOptions); err != nil {
-		return fmt.Errorf("couldn't init manager %v", err)
-	}
-
-	// start the bootstrap manager
-	if err = this.bpfManager.Start(); err != nil {
-		return fmt.Errorf("couldn't start bootstrap manager %v", err)
-	}
-
-	/*
+	if networkLatency {
 		objs := monitorBpfObjects{}
 
 		reader := bytes.NewReader(byteBuf)
@@ -131,8 +115,7 @@ func (this *MMonitorProbe) start() error {
 			return fmt.Errorf("couldn't find asset %v.", err)
 		}
 
-		this.linkData, err = link.AttachRawTracepoint(link.RawTracepointOptions{
-			Name:    "sys_enter",
+		this.linkData, err = link.AttachTracing(link.TracingOptions{
 			Program: objs.monitorBpfPrograms.MonitorClose,
 		})
 		if err != nil {
@@ -142,7 +125,25 @@ func (this *MMonitorProbe) start() error {
 
 		this.eventMaps = append(this.eventMaps, objs.monitorBpfMaps.Events)
 		this.eventFuncMaps[objs.monitorBpfMaps.Events] = &event.MonitorEvent{}
-	*/
+
+	} else {
+
+		// setup the managers
+		err = this.setupManagers()
+		if err != nil {
+			return fmt.Errorf("kamailio module couldn't find binPath %v.", err)
+		}
+
+		// initialize the bootstrap manager
+		if err = this.bpfManager.InitWithOptions(bytes.NewReader(byteBuf), this.bpfManagerOptions); err != nil {
+			return fmt.Errorf("couldn't init manager %v", err)
+		}
+
+		// start the bootstrap manager
+		if err = this.bpfManager.Start(); err != nil {
+			return fmt.Errorf("couldn't start bootstrap manager %v", err)
+		}
+	}
 
 	err = this.initDecodeFun()
 	if err != nil {
@@ -168,6 +169,7 @@ func (this *MMonitorProbe) setupManagers() error {
 	versionInfo := this.conf.(*config.MonitorConfig).VersionInfo
 	syscall := this.conf.(*config.MonitorConfig).SysCall
 	usercall := this.conf.(*config.MonitorConfig).UserCall
+	networkcall := this.conf.(*config.MonitorConfig).NetworkCall
 	userFunction := this.conf.(*config.MonitorConfig).UserFunctions
 
 	switch this.conf.(*config.MonitorConfig).ElfType {
@@ -199,6 +201,7 @@ func (this *MMonitorProbe) setupManagers() error {
 			Section:      "raw_tracepoint/sys_exit",
 			EbpfFuncName: "raw_tracepoint_sys_exit",
 		})
+
 	} else if usercall {
 
 		if len(userFunction) == 0 {
@@ -223,7 +226,50 @@ func (this *MMonitorProbe) setupManagers() error {
 				Cookie:           uint64(index + 1),
 			})
 		}
+	} else if networkcall {
+
+		probes = append(probes, &manager.Probe{
+			Section:          "kprobe/tcp_v4_connect",
+			EbpfFuncName:     "tcp_v4_connect",
+			AttachToFuncName: "tcp_v4_connect",
+			Cookie:           uint64(1),
+		})
+
+		probes = append(probes, &manager.Probe{
+			Section:          "kretprobe/tcp_v4_connect",
+			EbpfFuncName:     "tcp_v4_connect_ret",
+			AttachToFuncName: "tcp_v4_connect",
+			Cookie:           uint64(1),
+		})
+
+		probes = append(probes, &manager.Probe{
+			Section:          "kprobe/tcp_rcv_state_process",
+			EbpfFuncName:     "tcp_rcv_state_process",
+			AttachToFuncName: "tcp_rcv_state_process",
+			Cookie:           uint64(2),
+		})
+
+	} else {
+		fmt.Println("No syscall or usercall")
+		return nil
 	}
+	/*
+		this.linkData, err = link.AttachTracing(link.TracingOptions{
+			Program: objs.bpfPrograms.TcpClose,
+		})
+		if err != nil {
+			this.logger.Printf("%s\tBPF bytecode filename FATAL: [%s]\n", this.Name(), bpfFileName)
+			log.Fatal(err)
+		}
+
+		this.eventMaps = append(this.eventMaps, objs.bpfMaps.Events)
+		this.eventFuncMaps[objs.bpfMaps.Events] = &event.TcprttEvent{}
+
+		err = this.initDecodeFun()
+		if err != nil {
+			return err
+		}
+	*/
 
 	this.bpfManager = &manager.Manager{
 		Probes: probes,

@@ -37,6 +37,26 @@ type MonitorSysCallEvent struct {
 }
 
 type MonitorEvent struct {
+	Type         uint8        `json:"type"`
+	SysEvent     SysEvent     `json:"sys_event"`
+	NetworkEvent NetworkEvent `json:"network_event"`
+}
+
+type SysEvent struct {
+	Timestamp     uint64   `json:"timestamp"`
+	Pid           uint32   `json:"pid"`
+	Tid           uint32   `json:"tid"`
+	SysCallId     uint32   `json:"syscall_id"`
+	Latency       uint32   `json:"latency"`
+	Comm          [16]byte `json:"Comm"`
+	NrCpusAllowed uint32   `json:"nr_cpus_allowed"`
+	RecentUsedCpu uint32   `json:"recent_used_cpu"`
+	ExitCode      uint32   `json:"exit_code"`
+	Cookie        uint64   `json:"cookie"`
+	funcName      string   `json:"func_name"`
+}
+
+type NetworkEvent struct {
 	Timestamp     uint64   `json:"timestamp"`
 	Pid           uint32   `json:"pid"`
 	Tid           uint32   `json:"tid"`
@@ -54,34 +74,37 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 
 	buf := bytes.NewBuffer(payload)
 
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Timestamp); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Type); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Pid); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.Timestamp); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Tid); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.Pid); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysCallId); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.Tid); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Latency); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.SysCallId); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Comm); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.Latency); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.NrCpusAllowed); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.Comm); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.RecentUsedCpu); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.NrCpusAllowed); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.ExitCode); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.RecentUsedCpu); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Cookie); err != nil {
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.ExitCode); err != nil {
+		return
+	}
+	if err = binary.Read(buf, binary.LittleEndian, &tcpev.SysEvent.Cookie); err != nil {
 		return
 	}
 
@@ -90,41 +113,41 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 
 func (tcpev *MonitorEvent) DoCorrelation(userFunctionArray []string) bool {
 
-	tcpev.funcName = "unknown"
+	tcpev.SysEvent.funcName = "unknown"
 
-	if tcpev.SysCallId == 1 {
-		tcpev.funcName = "write"
-	} else if tcpev.SysCallId == 2 {
-		tcpev.funcName = "open"
-	} else if tcpev.SysCallId == 3 {
-		tcpev.funcName = "read"
-	} else if tcpev.SysCallId == 15 {
-		tcpev.funcName = "chown"
-	} else if tcpev.SysCallId == 21 {
-		tcpev.funcName = "access"
-	} else if tcpev.SysCallId == 23 {
-		tcpev.funcName = "truncate"
-	} else if tcpev.SysCallId == 62 {
-		tcpev.funcName = "sys_kill"
-	} else if tcpev.SysCallId == 34 {
-		tcpev.funcName = "pause"
-	} else if tcpev.SysCallId == 128 {
-		tcpev.funcName = "rt_sigtimedwait"
-	} else if tcpev.SysCallId == 232 {
-		tcpev.funcName = "epoll_wait"
-	} else if tcpev.SysCallId == 281 {
-		tcpev.funcName = "futex"
+	if tcpev.SysEvent.SysCallId == 1 {
+		tcpev.SysEvent.funcName = "write"
+	} else if tcpev.SysEvent.SysCallId == 2 {
+		tcpev.SysEvent.funcName = "open"
+	} else if tcpev.SysEvent.SysCallId == 3 {
+		tcpev.SysEvent.funcName = "read"
+	} else if tcpev.SysEvent.SysCallId == 15 {
+		tcpev.SysEvent.funcName = "chown"
+	} else if tcpev.SysEvent.SysCallId == 21 {
+		tcpev.SysEvent.funcName = "access"
+	} else if tcpev.SysEvent.SysCallId == 23 {
+		tcpev.SysEvent.funcName = "truncate"
+	} else if tcpev.SysEvent.SysCallId == 62 {
+		tcpev.SysEvent.funcName = "sys_kill"
+	} else if tcpev.SysEvent.SysCallId == 34 {
+		tcpev.SysEvent.funcName = "pause"
+	} else if tcpev.SysEvent.SysCallId == 128 {
+		tcpev.SysEvent.funcName = "rt_sigtimedwait"
+	} else if tcpev.SysEvent.SysCallId == 232 {
+		tcpev.SysEvent.funcName = "epoll_wait"
+	} else if tcpev.SysEvent.SysCallId == 281 {
+		tcpev.SysEvent.funcName = "futex"
 	}
 
-	if int(tcpev.Cookie) > 0 && int(tcpev.Cookie) <= len(userFunctionArray) {
-		tcpev.funcName = userFunctionArray[tcpev.Cookie-1]
+	if int(tcpev.SysEvent.Cookie) > 0 && int(tcpev.SysEvent.Cookie) <= len(userFunctionArray) {
+		tcpev.SysEvent.funcName = userFunctionArray[tcpev.SysEvent.Cookie-1]
 	}
 
 	return false
 }
 
 func (tcpev *MonitorEvent) GetUUID() string {
-	return fmt.Sprintf("%d_%d", tcpev.Pid, tcpev.Tid)
+	return fmt.Sprintf("%d_%d", tcpev.SysEvent.Pid, tcpev.SysEvent.Tid)
 }
 
 func (tcpev *MonitorEvent) Payload() []byte {
@@ -153,7 +176,7 @@ func (tcpev *MonitorEvent) String() string {
 	prefix := COLORGREEN
 
 	s := fmt.Sprintf("%s Time: %d Pid: %d Tid: %d Comm: [%s] SysID: %d Func:%s Time Latency: %d ns, Max Cpu: %d, Recent CPU: %d, Exit Code: %d, Cookie: %d %s", prefix,
-		tcpev.Timestamp, tcpev.Pid, tcpev.Tid, string(tcpev.Comm[:]), tcpev.SysCallId, tcpev.funcName, tcpev.Latency, tcpev.NrCpusAllowed, tcpev.RecentUsedCpu, tcpev.ExitCode, tcpev.Cookie,
+		tcpev.SysEvent.Timestamp, tcpev.SysEvent.Pid, tcpev.SysEvent.Tid, string(tcpev.SysEvent.Comm[:]), tcpev.SysEvent.SysCallId, tcpev.SysEvent.funcName, tcpev.SysEvent.Latency, tcpev.SysEvent.NrCpusAllowed, tcpev.SysEvent.RecentUsedCpu, tcpev.SysEvent.ExitCode, tcpev.SysEvent.Cookie,
 		COLORRESET)
 	return s
 }
