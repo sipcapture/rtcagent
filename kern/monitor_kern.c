@@ -54,14 +54,14 @@ char __license[] SEC("license") = "Dual MIT/GPL";
  */
 
 // packed to avoid padding because the layout of the struct is significant
-#pragma pack(push, 1)
+//#pragma pack(push, 1)
 
 struct data_t
 {
 	u64 starttime_ns;
 	u32 counter;
 	u32 syscall_id;
-};
+}  __attribute__((packed));
 
 enum func_data_event_type
 {
@@ -89,16 +89,23 @@ struct
 
 struct
 {
+	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+	__type(key, u32);
+	__type(value, struct netevent_t);
+	__uint(max_entries, 1);
+} netdata_buffer_heap SEC(".maps");
+
+struct
+{
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
-
-struct {
+struct
+{
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-	__uint(key_size, sizeof(u32));
-	__uint(value_size, sizeof(u32));
+	//__uint(key_size, sizeof(u32));
+	//__uint(value_size, sizeof(u32));
 } netevents SEC(".maps");
-
 
 /**
  * The sample submitted to userspace over a ring buffer.
@@ -112,7 +119,8 @@ struct event
 	u32 saddr;
 	u32 daddr;
 	u32 srtt;
-};
+}  __attribute__((packed));
+
 struct event *unused_event __attribute__((unused));
 
 struct func_data_event_t
@@ -128,29 +136,28 @@ struct func_data_event_t
 	u32 recent_used_cpu;
 	u32 exit_code;
 	u64 cookie;
-};
+}  __attribute__((packed));
 
-struct netevent {
+
+struct netevent_t
+{
 	u8 event_type;
-	union {
-		__u32 saddr_v4;
-		__u8 saddr_v6[16];
-	};
-	union {
-		__u32 daddr_v4;
-		__u8 daddr_v6[16];
-	};
+	u64 timestamp_ns;
+	u32 saddr_v4;
+	u32 daddr_v4;
+	u8 saddr_v6[16];
+	u8 daddr_v6[16];
+	u16 lport;
+	u16 dport;
+	u32 tid;
+	u32 af;
+	u32 pid;
+	u64 delta_us;
+	u64 ts_us;
 	char comm[TASK_COMM_LEN];
-	__u64 delta_us;
-	__u64 ts_us;
-	__u32 tgid;
-	int af;
-	__u16 lport;
-	__u16 dport;
-};
+} __attribute__((packed));
 
-
-#pragma pack(pop)
+//#pragma pack(pop)
 
 static __inline struct func_data_event_t *create_func_data_event(u64 current_pid_tgid, u64 timestamp)
 {
@@ -163,6 +170,25 @@ static __inline struct func_data_event_t *create_func_data_event(u64 current_pid
 	}
 
 	const u32 kMask32b = 0xffffffff;
+	event->event_type = 1;
+	event->pid = current_pid_tgid >> 32;
+	event->tid = current_pid_tgid & kMask32b;
+	event->timestamp_ns = timestamp;
+
+	return event;
+}
+
+static __inline struct netevent_t *create_net_event(u64 current_pid_tgid, u64 timestamp)
+{
+	u32 kZero = 0;
+	struct netevent_t *event = bpf_map_lookup_elem(&netdata_buffer_heap, &kZero);
+	if (event == NULL)
+	{
+		return NULL;
+	}
+
+	const u32 kMask32b = 0xffffffff;
+	event->event_type = 2;
 	event->pid = current_pid_tgid >> 32;
 	event->tid = current_pid_tgid & kMask32b;
 	event->timestamp_ns = timestamp;
@@ -260,7 +286,6 @@ int raw_tracepoint_sys_exit(struct bpf_raw_tracepoint_args *ctx)
 	if (!ptr)
 		return 0;
 
-	event->event_type = 1;
 	event->syscall_id = ptr->syscall_id;
 	event->timestamp_ns = timestamp;
 	event->latency_ns = timestamp - ptr->starttime_ns;
@@ -373,7 +398,6 @@ int user_ret_function(struct pt_regs *ctx)
 
 	__u64 cookie = bpf_get_attach_cookie(ctx);
 
-	event->event_type = 1;
 	event->syscall_id = ptr->syscall_id;
 	event->timestamp_ns = timestamp;
 	event->latency_ns = timestamp - ptr->starttime_ns;
@@ -509,7 +533,6 @@ int BPF_KPROBE(tcp_v4_connect_ret, int ret)
 
 	__u64 cookie = bpf_get_attach_cookie(ctx);
 
-	event->event_type = 1;
 	event->syscall_id = ptr->syscall_id;
 	event->timestamp_ns = timestamp;
 	event->latency_ns = timestamp - ptr->starttime_ns;
@@ -536,7 +559,6 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 	u32 pid = current_pid_tgid >> 32;
 	u64 current_uid_gid = bpf_get_current_uid_gid();
 	u32 uid = current_uid_gid;
-	struct netevent event = {};
 
 	struct task_struct *task;
 	task = bpf_get_current_task_btf();
@@ -552,10 +574,10 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 		foundKamailio = 1;
 	}
 
-	if (foundKamailio == 0)
-	{
-		return 1;
-	}
+	// if (foundKamailio == 0)
+	//{
+	//	return 1;
+	// }
 
 	struct data_t *ptr;
 	ptr = bpf_task_storage_get(&enter_id, task, NULL, BPF_LOCAL_STORAGE_GET_F_CREATE);
@@ -572,16 +594,44 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 		return 0;
 	}
 
-	event.ts_us = timestamp / 1000;
-	event.lport = BPF_CORE_READ(sk, __sk_common.skc_num);
-	event.dport = BPF_CORE_READ(sk, __sk_common.skc_dport);
-	event.af = BPF_CORE_READ(sk, __sk_common.skc_family);
+	struct netevent_t *event = create_net_event(current_pid_tgid, timestamp);
+	if (event == NULL)
+	{
+		return 0;
+	}
 
+	bpf_printk("tcp_rcv_state_process [1] - state: %d\n", state);
 
-	//bpf_printk("tcp_rcv_state_process Latency: %d, Exit code:%d, CPU:%d\n", event->latency_ns, task->exit_code, task->recent_used_cpu);
-	//bpf_printk("Cookie: %lld, State: %d\n", event->cookie, state);
-	//bpf_get_current_comm(&event->comm, sizeof(event->comm));
-	bpf_perf_event_output(ctx, &netevents, BPF_F_CURRENT_CPU, &event, sizeof(event));
+	event->ts_us = timestamp / 1000;
+	event->lport = bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_num));
+	event->dport = bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_dport));
+	event->af = BPF_CORE_READ(sk, __sk_common.skc_family);
+
+	bpf_printk("tcp_rcv_state_process PID: %d, TID :%d, TS: %d\n", event->pid, event->tid, event->ts_us);
+	bpf_printk("tcp_rcv_state_process === PID: %d\n", pid);
+
+	if (event->af == AF_INET)
+	{
+		event->saddr_v4 = BPF_CORE_READ(sk, __sk_common.skc_rcv_saddr);
+		event->daddr_v4 = BPF_CORE_READ(sk, __sk_common.skc_daddr);
+		bpf_printk("tcp_rcv_state_process Port: %d, Dport:%d, Af:%d\n", event->lport, event->dport, event->af);
+		bpf_printk("tcp_rcv_state_process SA: %d, DA: :%d, TS: %d\n", event->saddr_v4, event->daddr_v4, event->ts_us);
+	}
+	/*
+	else
+	{
+		BPF_CORE_READ_INTO(&event->saddr_v6, sk,
+						   __sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
+		BPF_CORE_READ_INTO(&event->daddr_v6, sk,
+						   __sk_common.skc_v6_daddr.in6_u.u6_addr32);
+	}
+	*/
+
+	// bpf_printk("tcp_rcv_state_process Latency: %d, Exit code:%d, CPU:%d\n", event->latency_ns, task->exit_code, task->recent_used_cpu);
+	// bpf_printk("Cookie: %lld, State: %d\n", event->cookie, state);
+	// bpf_get_current_comm(&event->comm, sizeof(event->comm));
+	// bpf_perf_event_output(ctx, &netevents, BPF_F_CURRENT_CPU, &event, sizeof(event));
+	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(struct netevent_t));
 
 	// return trace_connect(sk);
 	return 0;

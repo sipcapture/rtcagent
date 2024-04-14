@@ -190,6 +190,7 @@ func (this *MMonitorProbe) setupManagers() error {
 	}
 
 	var probes = []*manager.Probe{}
+	eventMap := "events"
 
 	if syscall {
 		probes = append(probes, &manager.Probe{
@@ -249,6 +250,8 @@ func (this *MMonitorProbe) setupManagers() error {
 			Cookie:           uint64(2),
 		})
 
+		eventMap = "netevents"
+
 	} else {
 		fmt.Println("No syscall or usercall")
 		return nil
@@ -275,7 +278,7 @@ func (this *MMonitorProbe) setupManagers() error {
 		Probes: probes,
 		Maps: []*manager.Map{
 			{
-				Name: "events",
+				Name: eventMap,
 			},
 		},
 	}

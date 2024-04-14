@@ -29,6 +29,7 @@ import (
 	"os/signal"
 	"rtcagent/hepclient"
 	"rtcagent/hepclient/hepsender"
+	"rtcagent/metric"
 	"rtcagent/user/config"
 	"rtcagent/user/module"
 	"strings"
@@ -38,6 +39,7 @@ import (
 )
 
 var monitorConfig = config.NewMonitorConfig()
+var promCh chan *string
 
 // monitorCmd represents the monitor command
 var monitorCmd = &cobra.Command{
@@ -105,6 +107,14 @@ func monitorCommandFunc(command *cobra.Command, args []string) {
 		logger.Fatal(err)
 		os.Exit(1)
 	}
+
+	m := metric.New("prometheus")
+	m.Chan = promCh
+
+	if err := m.Run(); err != nil {
+		log.Printf("%v", err)
+	}
+	defer m.End()
 
 	go func(module module.IModule) {
 		err := module.Run()

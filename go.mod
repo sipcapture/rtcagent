@@ -18,8 +18,11 @@ require (
 )
 
 require (
+	github.com/VictoriaMetrics/fastcache v1.12.2 // indirect
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/florianl/go-tc v0.4.0 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
