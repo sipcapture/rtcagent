@@ -27,6 +27,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"rtcagent/model"
 	"rtcagent/outdata/hep"
 	monotonic "rtcagent/user/time"
 )
@@ -223,4 +224,10 @@ func (kem *OpensipsEvent) EventType() EventType {
 func (kem *OpensipsEvent) DoCorrelation(userFunctionArray []string) bool {
 
 	return false
+}
+
+func (kem *OpensipsEvent) GenerateMetric() model.AggregatedMetricValue {
+	//Lets allow to send HEP
+
+	return model.AggregatedMetricValue{}
 }

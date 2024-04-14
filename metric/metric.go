@@ -4,20 +4,21 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"rtcagent/model"
 	"runtime"
 	"syscall"
 )
 
 type Metric struct {
 	H    MetricHandler
-	Chan chan *string
+	Chan chan model.AggregatedMetricValue
 	quit chan bool
 }
 
 type MetricHandler interface {
 	setup() error
 	reload()
-	expose(chan *string)
+	expose(chan model.AggregatedMetricValue)
 }
 
 func New(name string) *Metric {

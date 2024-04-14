@@ -26,6 +26,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"net"
+	"rtcagent/model"
+	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type uint128 struct {
@@ -262,6 +267,29 @@ func (tcpev *MonitorEvent) String() string {
 func (tcpev *MonitorEvent) SendHep() bool {
 	//Lets allow to send HEP
 	return false
+}
+
+func (tcpev *MonitorEvent) GenerateMetric() model.AggregatedMetricValue {
+	//Lets allow to send HEP
+
+	labelNames := []string{}
+	//src_ip
+	src_ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(src_ip, tcpev.NetworkEvent.SrcIPv4)
+	dst_ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(dst_ip, tcpev.NetworkEvent.DstIPv4)
+	labelNames = append(labelNames, src_ip.String())
+	labelNames = append(labelNames, dst_ip.String())
+	labelNames = append(labelNames, strconv.Itoa(int(tcpev.NetworkEvent.SrcPort))) // Convert SrcPort to string
+	labelNames = append(labelNames, strconv.Itoa(int(tcpev.NetworkEvent.DstPort))) // Convert SrcPort to string
+
+	newAM := model.AggregatedMetricValue{
+		Labels: labelNames,
+		Value:  float64(tcpev.NetworkEvent.DeltaUS),
+		Name:   "tcp_receive_state",
+		Type:   prometheus.GaugeValue,
+	}
+	return newAM
 }
 
 func (tcpev *MonitorEvent) GenerateHEP() ([]byte, error) {

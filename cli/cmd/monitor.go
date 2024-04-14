@@ -39,7 +39,6 @@ import (
 )
 
 var monitorConfig = config.NewMonitorConfig()
-var promCh chan *string
 
 // monitorCmd represents the monitor command
 var monitorCmd = &cobra.Command{
@@ -96,7 +95,6 @@ func monitorCommandFunc(command *cobra.Command, args []string) {
 	}
 
 	log.Printf("RTCAGENT :: pid info :%d -%s", os.Getpid(), gConf.HepServer)
-	//bc.Pid = globalFlags.Pid
 	if e := monitorConfig.Check(); e != nil {
 		logger.Fatal(e)
 		os.Exit(1)
@@ -109,10 +107,10 @@ func monitorCommandFunc(command *cobra.Command, args []string) {
 	}
 
 	m := metric.New("prometheus")
-	m.Chan = promCh
+	m.Chan = monitorConfig.PromCh
 
 	if err := m.Run(); err != nil {
-		log.Printf("%v", err)
+		log.Printf("Error: %v", err)
 	}
 	defer m.End()
 
@@ -123,6 +121,7 @@ func monitorCommandFunc(command *cobra.Command, args []string) {
 		}
 	}(mod)
 	<-stopper
+
 	cancelFun()
 	os.Exit(0)
 }

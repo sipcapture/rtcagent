@@ -612,8 +612,8 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 
 	if (event->af == AF_INET)
 	{
-		event->saddr_v4 = BPF_CORE_READ(sk, __sk_common.skc_rcv_saddr);
-		event->daddr_v4 = BPF_CORE_READ(sk, __sk_common.skc_daddr);
+		event->saddr_v4 = bpf_ntohl(BPF_CORE_READ(sk, __sk_common.skc_rcv_saddr));
+		event->daddr_v4 = bpf_ntohl(BPF_CORE_READ(sk, __sk_common.skc_daddr));
 		bpf_printk("tcp_rcv_state_process Port: %d, Dport:%d, Af:%d\n", event->lport, event->dport, event->af);
 		bpf_printk("tcp_rcv_state_process SA: %d, DA: :%d, TS: %d\n", event->saddr_v4, event->daddr_v4, event->ts_us);
 	}

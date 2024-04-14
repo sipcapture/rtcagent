@@ -3,10 +3,17 @@ package metric
 import (
 	"fmt"
 	"log"
+	"net"
+	"net/http"
+	"rtcagent/model"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/prometheus/client_golang/prometheus"
+	version_collector "github.com/prometheus/client_golang/prometheus/collectors/version"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -22,6 +29,8 @@ type Prometheus struct {
 	TargetMap   map[string]string
 	TargetConf  *sync.RWMutex
 	cache       *fastcache.Cache
+	s           *http.Server
+	exporter    *Exporter
 }
 
 func (p *Prometheus) setup() (err error) {
@@ -30,33 +39,66 @@ func (p *Prometheus) setup() (err error) {
 	p.TargetName = strings.Split("test", ",")
 	p.cache = fastcache.New(cacheSize)
 
-	if len(p.TargetIP) == len(p.TargetName) && p.TargetIP != nil && p.TargetName != nil {
-		if len(p.TargetIP[0]) == 0 || len(p.TargetName[0]) == 0 {
-			log.Println("expose metrics without or unbalanced targets")
-			p.TargetIP[0] = ""
-			p.TargetName[0] = ""
-			p.TargetEmpty = true
-		} else {
-			for i := range p.TargetName {
-				log.Printf("prometheus tag assignment %d: %s -> %s", i+1, p.TargetIP[i], p.TargetName[i])
-			}
-			p.TargetMap = make(map[string]string)
-			for i := 0; i < len(p.TargetName); i++ {
-				p.TargetMap[p.TargetIP[i]] = p.TargetName[i]
-			}
-		}
-	} else {
-		log.Println("please give every PromTargetIP a unique IP and PromTargetName a unique name")
-		return fmt.Errorf("faulty PromTargetIP or PromTargetName")
+	err = prometheus.Register(version_collector.NewCollector("rtcagent"))
+	if err != nil {
+		log.Fatalf("Error registering version collector: %s", err)
 	}
+
+	p.exporter, err = NewExporter()
+	if err != nil {
+		log.Fatalf("Error creating exporter: %s", err)
+	}
+
+	err = prometheus.Register(p.exporter)
+	if err != nil {
+		log.Fatalf("Error registering exporter: %s", err)
+	}
+
+	metricsPath := "/metrics"
+	listenAddress := ":9435"
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_, err = w.Write([]byte(`<html>
+			<head><title>eBPF Exporter</title></head>
+			<body>
+			<h1>eBPF Exporter</h1>
+			<p><a href="` + metricsPath + `">Metrics</a></p>
+			</body>
+			</html>`))
+		if err != nil {
+			log.Fatalf("Error sending response body: %s", err)
+		}
+	})
+
+	p.s = &http.Server{
+		Addr:           listenAddress,
+		Handler:        mux,
+		ReadTimeout:    0, // 1 * time.Minute,
+		WriteTimeout:   30 * time.Minute,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	go func() {
+
+		l, err := net.Listen("tcp", listenAddress)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(`{"server_state":"listening"}`)
+		log.Fatal(p.s.Serve(l))
+	}()
 
 	return err
 }
 
-func (p *Prometheus) expose(hCh chan *string) {
+func (p *Prometheus) expose(hCh chan model.AggregatedMetricValue) {
 	for pkt := range hCh {
 
-		p.dissectRTCPXRStats("ch", pkt)
+		p.exporter.Add(pkt)
 
 	}
 }

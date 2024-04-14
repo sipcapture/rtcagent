@@ -36,6 +36,8 @@ import (
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 
+	"rtcagent/model"
+
 	manager "github.com/adubovikov/ebpfmanager"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -51,6 +53,7 @@ type MMonitorProbe struct {
 	eventMaps         []*ebpf.Map
 	linkData          link.Link
 	userFunctionArray []string
+	promCh            chan model.AggregatedMetricValue
 }
 
 func (this *MMonitorProbe) Init(ctx context.Context, logger *log.Logger, conf config.IConfig) error {
@@ -171,6 +174,7 @@ func (this *MMonitorProbe) setupManagers() error {
 	usercall := this.conf.(*config.MonitorConfig).UserCall
 	networkcall := this.conf.(*config.MonitorConfig).NetworkCall
 	userFunction := this.conf.(*config.MonitorConfig).UserFunctions
+	this.promCh = this.conf.(*config.MonitorConfig).PromCh
 
 	switch this.conf.(*config.MonitorConfig).ElfType {
 	case config.ElfTypeBin:
@@ -345,6 +349,8 @@ func (this *MMonitorProbe) Dispatcher(e event.IEventStruct) {
 			this.logger.Println(e.StringHex())
 		} else {
 			e.DoCorrelation(this.userFunctionArray)
+			metric := e.GenerateMetric()
+			this.promCh <- metric
 			this.logger.Println(e.String())
 		}
 	case event.EventTypeEventProcessor:

@@ -28,6 +28,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"rtcagent/model"
 	"strings"
 )
 
@@ -53,10 +54,12 @@ type MonitorConfig struct {
 	Version        MonitorType //
 	VersionInfo    string      // info
 	UserFunctions  []string    // user functions
+	PromCh         chan model.AggregatedMetricValue
 }
 
 func NewMonitorConfig() *MonitorConfig {
 	config := &MonitorConfig{}
+	config.PromCh = make(chan model.AggregatedMetricValue, 500)
 	return config
 }
 
@@ -76,16 +79,6 @@ func (this *MonitorConfig) Check() error {
 		return e
 	}
 	this.ElfType = ElfTypeBin
-
-	/*_elf, e := elf.Open(this.Monitorpath)
-	if e != nil {
-		return e
-	}
-	*/
-
-	//if funcName == "" {
-	//	return errors.New(fmt.Sprintf("cant match opensips 'receive_msg'function to hook with opensips file::%s", this.Opensipspath))
-	//}
 
 	return nil
 }
