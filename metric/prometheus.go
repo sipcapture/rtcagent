@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
-	"github.com/prometheus/client_golang/prometheus"
-	version_collector "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -30,7 +28,6 @@ type Prometheus struct {
 	TargetConf  *sync.RWMutex
 	cache       *fastcache.Cache
 	s           *http.Server
-	exporter    *Exporter
 }
 
 func (p *Prometheus) setup() (err error) {
@@ -39,20 +36,22 @@ func (p *Prometheus) setup() (err error) {
 	p.TargetName = strings.Split("test", ",")
 	p.cache = fastcache.New(cacheSize)
 
-	err = prometheus.Register(version_collector.NewCollector("rtcagent"))
-	if err != nil {
-		log.Fatalf("Error registering version collector: %s", err)
-	}
+	/*
+		err = prometheus.Register(version_collector.NewCollector("rtcagent"))
+		if err != nil {
+			log.Fatalf("Error registering version collector: %s", err)
+		}
 
-	p.exporter, err = NewExporter()
-	if err != nil {
-		log.Fatalf("Error creating exporter: %s", err)
-	}
+		p.exporter, err = NewExporter()
+		if err != nil {
+			log.Fatalf("Error creating exporter: %s", err)
+		}
 
-	err = prometheus.Register(p.exporter)
-	if err != nil {
-		log.Fatalf("Error registering exporter: %s", err)
-	}
+		err = prometheus.Register(p.exporter)
+		if err != nil {
+			log.Fatalf("Error registering exporter: %s", err)
+		}
+	*/
 
 	metricsPath := "/metrics"
 	listenAddress := ":9435"
@@ -60,24 +59,14 @@ func (p *Prometheus) setup() (err error) {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 
-	/*
-		mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-			_, err = w.Write([]byte("ok"))
-			if err != nil {
-				log.Fatalf("Error sending response body: %s", err)
-			}
-		}
-	*/
-
-	//mux.Handle("/devices", p.exporter.GetDevices)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, err = w.Write([]byte(`<html>
-			<head><title>eBPF Exporter</title></head>
-			<body>
-			<h1>eBPF Exporter</h1>
-			<p><a href="` + metricsPath + `">Metrics</a></p>
-			</body>
-			</html>`))
+				<head><title>eBPF Exporter</title></head>
+				<body>
+				<h1>eBPF Exporter</h1>
+				<p><a href="` + metricsPath + `">Metrics</a></p>
+				</body>
+				</html>`))
 		if err != nil {
 			log.Fatalf("Error sending response body: %s", err)
 		}
@@ -109,7 +98,7 @@ func (p *Prometheus) setup() (err error) {
 func (p *Prometheus) expose(hCh chan model.AggregatedMetricValue) {
 	for pkt := range hCh {
 
-		p.exporter.Add(pkt)
-
+		fmt.Println(pkt.Name)
+		latencyTCP.WithLabelValues(pkt.Labels...).Set(pkt.Value)
 	}
 }
