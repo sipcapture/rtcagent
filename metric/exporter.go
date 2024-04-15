@@ -2,7 +2,7 @@ package metric
 
 import (
 	"fmt"
-	"time"
+	"net/http"
 
 	"rtcagent/model"
 
@@ -22,6 +22,7 @@ type Exporter struct {
 	enabledConfigsDesc *prometheus.Desc
 	programInfoDesc    *prometheus.Desc
 	deviceTCPRCVState  *prometheus.GaugeVec
+	deviceTCPRCVState2 *prometheus.GaugeVec
 }
 
 // New creates a new exporter with the provided config
@@ -45,6 +46,7 @@ func NewExporter() (*Exporter, error) {
 			Name: "rtcagent_tcp_rcv_state",
 		},
 		[]string{
+			"hostname",
 			"src_ip",
 			"dst_ip",
 			"src_port",
@@ -62,14 +64,24 @@ func NewExporter() (*Exporter, error) {
 	}, nil
 }
 
+// Collect satisfies prometheus.Collector interface and sends all metrics
+func (e *Exporter) GetDevices(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hello World"))
+}
+
 func (e *Exporter) Add(pkt model.AggregatedMetricValue) {
 
-	mapping["testkey"] = pkt
+	mapping[pkt.Name] = pkt
 }
 
 // Describe satisfies prometheus.Collector interface by sending descriptions
 // for all metrics the exporter can possibly report
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
+
+	//programName := "rtcagent"
 
 	fmt.Println("Describe")
 
@@ -99,6 +111,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		//ch <- prometheus.MustNewConstMetric(descs[programName][name], metricValue.Type, metricValue.Value, metricValue.Labels...)
 		metric := e.deviceTCPRCVState.WithLabelValues(metricValue.Labels...)
 		metric.Set(metricValue.Value)
-		ch <- prometheus.NewMetricWithTimestamp(time.Now(), metric)
+		ch <- metric
+
 	}
 }

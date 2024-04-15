@@ -59,6 +59,17 @@ func (p *Prometheus) setup() (err error) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
+
+	/*
+		mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+			_, err = w.Write([]byte("ok"))
+			if err != nil {
+				log.Fatalf("Error sending response body: %s", err)
+			}
+		}
+	*/
+
+	//mux.Handle("/devices", p.exporter.GetDevices)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, err = w.Write([]byte(`<html>
 			<head><title>eBPF Exporter</title></head>

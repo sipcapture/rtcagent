@@ -278,6 +278,7 @@ func (tcpev *MonitorEvent) GenerateMetric() model.AggregatedMetricValue {
 	binary.BigEndian.PutUint32(src_ip, tcpev.NetworkEvent.SrcIPv4)
 	dst_ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(dst_ip, tcpev.NetworkEvent.DstIPv4)
+	labelNames = append(labelNames, "alex-kamailio")
 	labelNames = append(labelNames, src_ip.String())
 	labelNames = append(labelNames, dst_ip.String())
 	labelNames = append(labelNames, strconv.Itoa(int(tcpev.NetworkEvent.SrcPort))) // Convert SrcPort to string
