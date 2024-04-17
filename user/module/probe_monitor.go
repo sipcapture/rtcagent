@@ -84,8 +84,7 @@ func (this *MMonitorProbe) Start() error {
 }
 
 func (this *MMonitorProbe) MakeUI() error {
-
-	networkLatency := this.conf.(*config.MonitorConfig).NetworkLatency
+	networkCall := this.conf.(*config.MonitorConfig).NetworkCall
 
 	go func() {
 		for {
@@ -94,7 +93,7 @@ func (this *MMonitorProbe) MakeUI() error {
 			tm.Clear() // Clear current screen
 			tm.MoveCursor(1, 1)
 
-			if networkLatency {
+			if networkCall {
 
 				fmt.Printf("\r\n %s Kamailio TCP Latency. Refresh 1 sec.%s\r\n\r\n", event.COLORCYAN, event.COLORRESET)
 				fmt.Printf("%s %-15s %-15s %-15s %-4s %-4s %-15s %-4s %-15s %-4s %-18s %-18s %-6s %-6s %s\r\n\r\n", event.COLORRED, "Node", "Timestamp", "App", "Pid", "Tid", "Src IP", "Src Port", "Dst IP", "Dst Port", "Old State", "New State", "Delta (ns)", "Latency (ns) ", event.COLORRESET)
@@ -112,7 +111,7 @@ func (this *MMonitorProbe) MakeUI() error {
 				}
 
 				if index < 50 {
-					if networkLatency {
+					if networkCall {
 						fmt.Printf("%s %-15s %-15d  %-25s %-4d %-4d %-15s:%-6d -> %-15s:%-6d %-18s %-18s %-6d %-6f%s\r\n", event.COLORGREEN,
 							val.MapLabelsString["node"], val.Time, val.MapLabelsString["comm"], val.MapLabelsInt["pid"], val.MapLabelsInt["tid"], val.MapLabelsString["src_ip"], val.MapLabelsInt["src_port"], val.MapLabelsString["dst_ip"],
 							val.MapLabelsInt["dst_port"], val.MapLabelsString["oldstate"], val.MapLabelsString["newstate"], val.MapLabelsInt["delta"], val.Value, event.COLORRESET)
