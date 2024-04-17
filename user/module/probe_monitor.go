@@ -35,10 +35,13 @@ import (
 	"rtcagent/assets"
 	"rtcagent/user/config"
 	"rtcagent/user/event"
+	"sort"
+	"time"
 
 	"rtcagent/model"
 
 	manager "github.com/adubovikov/ebpfmanager"
+	tm "github.com/buger/goterm"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
@@ -54,6 +57,8 @@ type MMonitorProbe struct {
 	linkData          link.Link
 	userFunctionArray []string
 	promCh            chan model.AggregatedMetricValue
+	uiCh              chan model.AggregatedTimeMetricValue
+	uiSorted          []model.AggregatedTimeMetricValue
 }
 
 func (this *MMonitorProbe) Init(ctx context.Context, logger *log.Logger, conf config.IConfig) error {
@@ -71,6 +76,74 @@ func (this *MMonitorProbe) Start() error {
 	if err := this.start(); err != nil {
 		return err
 	}
+
+	//UI channel
+	go this.MakeUI()
+
+	return nil
+}
+
+func (this *MMonitorProbe) MakeUI() error {
+
+	networkLatency := this.conf.(*config.MonitorConfig).NetworkLatency
+
+	go func() {
+		for {
+			expireNow := time.Now().Unix()
+			//fmt.Print("\033[H\033[2J")
+			tm.Clear() // Clear current screen
+			tm.MoveCursor(1, 1)
+
+			if networkLatency {
+
+				fmt.Printf("\r\n %s Kamailio TCP Latency. Refresh 1 sec.%s\r\n\r\n", event.COLORCYAN, event.COLORRESET)
+				fmt.Printf("%s %-15s %-15s %-15s %-4s %-4s %-15s %-4s %-15s %-4s %-18s %-18s %-6s %-6s %s\r\n\r\n", event.COLORRED, "Node", "Timestamp", "App", "Pid", "Tid", "Src IP", "Src Port", "Dst IP", "Dst Port", "Old State", "New State", "Delta (ns)", "Latency (ns) ", event.COLORRESET)
+			} else {
+
+				fmt.Printf("\r\n %s Kamailio Syscall/Usercall. Refresh 1 sec.%s\r\n\r\n", event.COLORCYAN, event.COLORRESET)
+				fmt.Printf("%s %-15s %-15s %-8s %-8s %-8s %-15s %-15s %-15s %-15s %-15s %-15s %s\r\n\r\n", event.COLORRED, "Node", "Timestamp", "App", "PID", "TID", "Syscallid", "Function", "Exit Code", "MaxCPU", "RecentCPU", "Latency (ns) ", event.COLORRESET)
+			}
+
+			temp := this.uiSorted[:0]
+
+			for index, val := range this.uiSorted {
+				if val.Time >= expireNow {
+					temp = append(temp, val)
+				}
+
+				if index < 50 {
+					if networkLatency {
+						fmt.Printf("%s %-15s %-15d  %-25s %-4d %-4d %-15s:%-6d -> %-15s:%-6d %-18s %-18s %-6d %-6f%s\r\n", event.COLORGREEN,
+							val.MapLabelsString["node"], val.Time, val.MapLabelsString["comm"], val.MapLabelsInt["pid"], val.MapLabelsInt["tid"], val.MapLabelsString["src_ip"], val.MapLabelsInt["src_port"], val.MapLabelsString["dst_ip"],
+							val.MapLabelsInt["dst_port"], val.MapLabelsString["oldstate"], val.MapLabelsString["newstate"], val.MapLabelsInt["delta"], val.Value, event.COLORRESET)
+					} else {
+						fmt.Printf("%s %-15s %-15d %-15s %-8d %-8d %-15d %-15s %-15d %-15d %-15d %-5d %s\r\n", event.COLORGREEN,
+							val.MapLabelsString["node"], val.Time, val.MapLabelsString["comm"], val.MapLabelsInt["pid"], val.MapLabelsInt["tid"], val.MapLabelsInt["syscallid"], val.MapLabelsString["funcname"],
+							val.MapLabelsInt["exit_code"], val.MapLabelsInt["nrcpu"], val.MapLabelsInt["recentcpu"],
+							val.MapLabelsInt["latency"], event.COLORRESET)
+					}
+
+				}
+			}
+
+			//tm.Flush() // Call it every time at the end of rendering
+			this.uiSorted = temp
+			time.Sleep(time.Duration(1) * time.Second)
+		}
+
+	}()
+
+	for pkt := range this.uiCh {
+
+		this.uiSorted = append(this.uiSorted, pkt)
+
+		//Sorted by Latency
+		sort.Slice(this.uiSorted, func(i, j int) bool {
+			return this.uiSorted[i].Value > this.uiSorted[j].Value
+		})
+		//latencyTCP.WithLabelValues(pkt.Labels...).Set(pkt.Value)
+	}
+
 	return nil
 }
 
@@ -175,6 +248,7 @@ func (this *MMonitorProbe) setupManagers() error {
 	networkcall := this.conf.(*config.MonitorConfig).NetworkCall
 	userFunction := this.conf.(*config.MonitorConfig).UserFunctions
 	this.promCh = this.conf.(*config.MonitorConfig).PromCh
+	this.uiCh = this.conf.(*config.MonitorConfig).UiCh
 
 	switch this.conf.(*config.MonitorConfig).ElfType {
 	case config.ElfTypeBin:
@@ -240,18 +314,27 @@ func (this *MMonitorProbe) setupManagers() error {
 			Cookie:           uint64(1),
 		})
 
-		probes = append(probes, &manager.Probe{
-			Section:          "kretprobe/tcp_v4_connect",
-			EbpfFuncName:     "tcp_v4_connect_ret",
-			AttachToFuncName: "tcp_v4_connect",
-			Cookie:           uint64(1),
-		})
+		/*
+			probes = append(probes, &manager.Probe{
+				Section:          "kretprobe/tcp_v4_connect",
+				EbpfFuncName:     "tcp_v4_connect_ret",
+				AttachToFuncName: "tcp_v4_connect",
+				Cookie:           uint64(1),
+			})
 
+			probes = append(probes, &manager.Probe{
+				Section:          "kprobe/tcp_rcv_state_process",
+				EbpfFuncName:     "tcp_rcv_state_process",
+				AttachToFuncName: "tcp_rcv_state_process",
+				Cookie:           uint64(2),
+			})
+
+		*/
 		probes = append(probes, &manager.Probe{
-			Section:          "kprobe/tcp_rcv_state_process",
-			EbpfFuncName:     "tcp_rcv_state_process",
-			AttachToFuncName: "tcp_rcv_state_process",
-			Cookie:           uint64(2),
+			Section:          "tracepoint/sock/inet_sock_set_state",
+			EbpfFuncName:     "handle_set_state",
+			AttachToFuncName: "handle_set_state",
+			Cookie:           uint64(3),
 		})
 
 		eventMap = "netevents"
@@ -349,9 +432,9 @@ func (this *MMonitorProbe) Dispatcher(e event.IEventStruct) {
 			this.logger.Println(e.StringHex())
 		} else {
 			e.DoCorrelation(this.userFunctionArray)
-			metric := e.GenerateMetric()
-			this.promCh <- metric
-			this.logger.Println(e.String())
+			this.promCh <- e.GenerateMetric()
+			this.uiCh <- e.GenerateTimeMetric()
+			//this.logger.Println(e.String())
 		}
 	case event.EventTypeEventProcessor:
 		this.processor.Write(e)

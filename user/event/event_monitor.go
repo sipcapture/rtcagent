@@ -29,6 +29,7 @@ import (
 	"net"
 	"rtcagent/model"
 	"strconv"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -51,6 +52,57 @@ type MonitorEvent struct {
 	SysEvent     SysEvent     `json:"sys_event"`
 	NetworkEvent NetworkEvent `json:"network_event"`
 	funcName     string       `json:"func_name"`
+}
+
+type MyEnum int
+
+const (
+	TCP_ESTABLISHED  MyEnum = 1
+	TCP_SYN_SENT     MyEnum = 2
+	TCP_SYN_RECV     MyEnum = 3
+	TCP_FIN_WAIT1    MyEnum = 4
+	TCP_FIN_WAIT2    MyEnum = 5
+	TCP_TIME_WAIT    MyEnum = 6
+	TCP_CLOSE        MyEnum = 7
+	TCP_CLOSE_WAIT   MyEnum = 8
+	TCP_LAST_ACK     MyEnum = 9
+	TCP_LISTEN       MyEnum = 10
+	TCP_CLOSING      MyEnum = 11
+	TCP_NEW_SYN_RECV MyEnum = 12
+	TCP_MAX_STATES   MyEnum = 13
+)
+
+func (e MyEnum) String() string {
+	switch e {
+	case TCP_ESTABLISHED:
+		return "TCP_ESTABLISHED"
+	case TCP_SYN_SENT:
+		return "TCP_SYN_SENT"
+	case TCP_SYN_RECV:
+		return "TCP_SYN_RECV"
+	case TCP_FIN_WAIT1:
+		return "TCP_FIN_WAIT1"
+	case TCP_FIN_WAIT2:
+		return "TCP_FIN_WAIT2"
+	case TCP_TIME_WAIT:
+		return "TCP_TIME_WAIT"
+	case TCP_CLOSE:
+		return "TCP_CLOSE"
+	case TCP_CLOSE_WAIT:
+		return "TCP_CLOSE_WAIT"
+	case TCP_LAST_ACK:
+		return "TCP_LAST_ACK"
+	case TCP_LISTEN:
+		return "TCP_LISTEN"
+	case TCP_CLOSING:
+		return "TCP_CLOSING"
+	case TCP_NEW_SYN_RECV:
+		return "TCP_NEW_SYN_RECV"
+	case TCP_MAX_STATES:
+		return "TCP_MAX_STATES"
+	default:
+		return "UNKNOWN"
+	}
 }
 
 type SysEvent struct {
@@ -79,6 +131,8 @@ type NetworkEvent struct {
 	TsUS      uint64   `json:"ts_us"`
 	Pid       uint32   `json:"pid"`
 	Tid       uint32   `json:"tid"`
+	Oldstate  uint32   `json:"oldstate"`
+	Newstate  uint32   `json:"newstate"`
 	Comm      [16]byte `json:"Comm"`
 }
 
@@ -89,8 +143,6 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 	if err = binary.Read(buf, binary.LittleEndian, &tcpev.Type); err != nil {
 		return
 	}
-
-	fmt.Printf("MonitorEvent Decode type: %d\n", tcpev.Type)
 
 	if tcpev.Type == 1 {
 
@@ -173,9 +225,16 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 		if err = binary.Read(buf, binary.LittleEndian, &tcpev.NetworkEvent.Pid); err != nil {
 			return
 		}
+		if err = binary.Read(buf, binary.LittleEndian, &tcpev.NetworkEvent.Oldstate); err != nil {
+			return
+		}
+		if err = binary.Read(buf, binary.LittleEndian, &tcpev.NetworkEvent.Newstate); err != nil {
+			return
+		}
 		if err = binary.Read(buf, binary.LittleEndian, &tcpev.NetworkEvent.Comm); err != nil {
 			return
 		}
+
 	}
 
 	return nil
@@ -185,7 +244,9 @@ func (tcpev *MonitorEvent) DoCorrelation(userFunctionArray []string) bool {
 
 	tcpev.funcName = "unknown"
 
-	if tcpev.SysEvent.SysCallId == 1 {
+	if tcpev.SysEvent.SysCallId == 0 {
+		tcpev.funcName = "read"
+	} else if tcpev.SysEvent.SysCallId == 1 {
 		tcpev.funcName = "write"
 	} else if tcpev.SysEvent.SysCallId == 2 {
 		tcpev.funcName = "open"
@@ -205,6 +266,8 @@ func (tcpev *MonitorEvent) DoCorrelation(userFunctionArray []string) bool {
 		tcpev.funcName = "rt_sigtimedwait"
 	} else if tcpev.SysEvent.SysCallId == 232 {
 		tcpev.funcName = "epoll_wait"
+	} else if tcpev.SysEvent.SysCallId == 270 {
+		tcpev.funcName = "getdents"
 	} else if tcpev.SysEvent.SysCallId == 281 {
 		tcpev.funcName = "futex"
 	}
@@ -245,7 +308,6 @@ func (tcpev *MonitorEvent) String() string {
 	//addr := tcpev.module.(*module.MOpenSSLProbe).GetConn(tcpev.Pid, tcpev.Fd)
 	prefix := COLORGREEN
 
-	fmt.Printf("MonitorEvent type: %d\n", tcpev.Type)
 	s := ""
 
 	if tcpev.Type == 1 {
@@ -254,10 +316,18 @@ func (tcpev *MonitorEvent) String() string {
 			COLORRESET)
 	} else if tcpev.Type == 2 {
 
-		s = fmt.Sprintf("%s Time: %d Pid: %d Tid: %d Comm: [%s], IPType: %d, Src_Port: %d, Dst_Port: %d, Src IP: %d, Dst IP: %d %s", prefix,
-			tcpev.NetworkEvent.Timestamp, tcpev.NetworkEvent.Pid, tcpev.NetworkEvent.Tid, string(tcpev.NetworkEvent.Comm[:]), tcpev.NetworkEvent.IPType,
-			tcpev.NetworkEvent.SrcPort, tcpev.NetworkEvent.DstPort,
-			tcpev.NetworkEvent.SrcIPv4, tcpev.NetworkEvent.DstIPv4,
+		src_ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(src_ip, tcpev.NetworkEvent.SrcIPv4)
+		dst_ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(dst_ip, tcpev.NetworkEvent.DstIPv4)
+
+		s = fmt.Sprintf("%s Time: %d Pid: %d Tid: %d Comm: [%s], IPType: %d, SrcIP: %s:%d, Dst_IP: %s:%d, OldState: %s, NewState: %s, Delta: %d %s", prefix,
+			tcpev.NetworkEvent.Timestamp, tcpev.NetworkEvent.Pid, tcpev.NetworkEvent.Tid, string(tcpev.NetworkEvent.Comm[:]),
+			tcpev.NetworkEvent.IPType,
+			src_ip, tcpev.NetworkEvent.SrcPort,
+			dst_ip, tcpev.NetworkEvent.DstPort,
+			MyEnum(tcpev.NetworkEvent.Oldstate).String(), MyEnum(tcpev.NetworkEvent.Newstate).String(),
+			tcpev.NetworkEvent.DeltaUS,
 			COLORRESET)
 	}
 
@@ -274,22 +344,86 @@ func (tcpev *MonitorEvent) GenerateMetric() model.AggregatedMetricValue {
 
 	labelNames := []string{}
 	//src_ip
-	src_ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(src_ip, tcpev.NetworkEvent.SrcIPv4)
-	dst_ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(dst_ip, tcpev.NetworkEvent.DstIPv4)
-	labelNames = append(labelNames, "alex-kamailio")
-	labelNames = append(labelNames, src_ip.String())
-	labelNames = append(labelNames, dst_ip.String())
-	labelNames = append(labelNames, strconv.Itoa(int(tcpev.NetworkEvent.SrcPort))) // Convert SrcPort to string
-	labelNames = append(labelNames, strconv.Itoa(int(tcpev.NetworkEvent.DstPort))) // Convert SrcPort to string
+
+	if tcpev.Type == 1 {
+		labelNames = append(labelNames, "alex-kamailio")
+	} else if tcpev.Type == 2 {
+		src_ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(src_ip, tcpev.NetworkEvent.SrcIPv4)
+		dst_ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(dst_ip, tcpev.NetworkEvent.DstIPv4)
+		labelNames = append(labelNames, "alex-kamailio")
+		labelNames = append(labelNames, src_ip.String())
+		labelNames = append(labelNames, dst_ip.String())
+		labelNames = append(labelNames, strconv.Itoa(int(tcpev.NetworkEvent.SrcPort))) // Convert SrcPort to string
+		labelNames = append(labelNames, strconv.Itoa(int(tcpev.NetworkEvent.DstPort))) // Convert SrcPort to string
+	}
 
 	newAM := model.AggregatedMetricValue{
-		Labels: labelNames,
-		Value:  float64(tcpev.NetworkEvent.DeltaUS),
-		Name:   "tcp_receive_state",
-		Type:   prometheus.GaugeValue,
+		Labels:  labelNames,
+		Value:   float64(tcpev.NetworkEvent.DeltaUS),
+		Name:    "tcp_receive_state",
+		Type:    prometheus.GaugeValue,
+		IntType: int(tcpev.Type),
 	}
+	return newAM
+}
+
+func (tcpev *MonitorEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	stringMap := make(map[string]string)
+	intMap := make(map[string]int)
+
+	//src_ip
+	var realVal uint64
+
+	if tcpev.Type == 1 {
+		stringMap["node"] = "alex-kamailio"
+		stringMap["comm"] = string(tcpev.SysEvent.Comm[:])
+		stringMap["funcname"] = tcpev.funcName
+
+		intMap["timestamp"] = int(tcpev.SysEvent.Timestamp)
+		intMap["pid"] = int(tcpev.SysEvent.Pid)
+		intMap["tid"] = int(tcpev.SysEvent.Tid)
+		intMap["syscallid"] = int(tcpev.SysEvent.SysCallId)
+		intMap["latency"] = int(tcpev.SysEvent.Latency)
+		intMap["nrcpu"] = int(tcpev.SysEvent.NrCpusAllowed)
+		intMap["recentcpu"] = int(tcpev.SysEvent.RecentUsedCpu)
+		intMap["exit_code"] = int(tcpev.SysEvent.ExitCode)
+		intMap["cookie"] = int(tcpev.SysEvent.Cookie)
+		realVal = uint64(tcpev.SysEvent.Latency)
+
+	} else if tcpev.Type == 2 {
+
+		src_ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(src_ip, tcpev.NetworkEvent.SrcIPv4)
+		dst_ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(dst_ip, tcpev.NetworkEvent.DstIPv4)
+		stringMap["node"] = "alex-kamailio"
+		stringMap["src_ip"] = src_ip.String()
+		stringMap["dst_ip"] = dst_ip.String()
+		stringMap["comm"] = string(tcpev.NetworkEvent.Comm[:])
+		stringMap["oldstate"] = MyEnum(tcpev.NetworkEvent.Oldstate).String()
+		stringMap["newstate"] = MyEnum(tcpev.NetworkEvent.Newstate).String()
+		intMap["src_port"] = int(tcpev.NetworkEvent.SrcPort)
+		intMap["dst_port"] = int(tcpev.NetworkEvent.DstPort)
+		intMap["pid"] = int(tcpev.NetworkEvent.Pid)
+		intMap["tid"] = int(tcpev.NetworkEvent.Tid)
+		intMap["iptype"] = int(tcpev.NetworkEvent.IPType)
+		intMap["delta"] = int(tcpev.NetworkEvent.DeltaUS)
+		realVal = uint64(tcpev.NetworkEvent.DeltaUS)
+	}
+
+	newAM := model.AggregatedTimeMetricValue{
+		MapLabelsString: stringMap,
+		MapLabelsInt:    intMap,
+		Value:           float64(realVal),
+		Name:            "tcp_receive_state",
+		Type:            prometheus.GaugeValue,
+		Time:            time.Now().Unix() + 30,
+		IntType:         int(tcpev.Type),
+	}
+
 	return newAM
 }
 

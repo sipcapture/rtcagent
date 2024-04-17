@@ -54,20 +54,46 @@ char __license[] SEC("license") = "Dual MIT/GPL";
  */
 
 // packed to avoid padding because the layout of the struct is significant
-//#pragma pack(push, 1)
+// #pragma pack(push, 1)
+
+const volatile __u64 targ_min_us = 0;
+const volatile pid_t targ_tgid = 0;
 
 struct data_t
 {
 	u64 starttime_ns;
 	u32 counter;
 	u32 syscall_id;
-}  __attribute__((packed));
+} __attribute__((packed));
 
 enum func_data_event_type
 {
 	kSIPRead,
 	kSIPWrite
 };
+
+struct piddata
+{
+	char comm[TASK_COMM_LEN];
+	u64 ts;
+	u32 tgid;
+} __attribute__((packed));
+
+struct
+{
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__uint(max_entries, 4096);
+	__type(key, struct sock *);
+	__type(value, struct piddata);
+} start SEC(".maps");
+
+struct
+{
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__uint(max_entries, 4096);
+	__type(key, struct sock *);
+	__type(value, __u64);
+} timestamps SEC(".maps");
 
 struct
 {
@@ -112,6 +138,7 @@ struct
  * Emit struct event's type info into the ELF's BTF so bpf2go
  * can generate a Go type from it.
  */
+
 struct event
 {
 	u16 sport;
@@ -119,7 +146,7 @@ struct event
 	u32 saddr;
 	u32 daddr;
 	u32 srtt;
-}  __attribute__((packed));
+} __attribute__((packed));
 
 struct event *unused_event __attribute__((unused));
 
@@ -136,8 +163,7 @@ struct func_data_event_t
 	u32 recent_used_cpu;
 	u32 exit_code;
 	u64 cookie;
-}  __attribute__((packed));
-
+} __attribute__((packed));
 
 struct netevent_t
 {
@@ -154,10 +180,12 @@ struct netevent_t
 	u32 pid;
 	u64 delta_us;
 	u64 ts_us;
+	u32 oldstate;
+	u32 newstate;
 	char comm[TASK_COMM_LEN];
 } __attribute__((packed));
 
-//#pragma pack(pop)
+// #pragma pack(pop)
 
 static __inline struct func_data_event_t *create_func_data_event(u64 current_pid_tgid, u64 timestamp)
 {
@@ -417,8 +445,6 @@ int user_ret_function(struct pt_regs *ctx)
 
 static int trace_connect(struct sock *sk)
 {
-	/*
-
 	u32 tgid = bpf_get_current_pid_tgid() >> 32;
 	struct piddata piddata = {};
 
@@ -429,8 +455,6 @@ static int trace_connect(struct sock *sk)
 	piddata.ts = bpf_ktime_get_ns();
 	piddata.tgid = tgid;
 	bpf_map_update_elem(&start, &sk, &piddata, 0);
-	*/
-
 	return 0;
 }
 
@@ -438,6 +462,7 @@ SEC("kprobe/tcp_v4_connect")
 int BPF_KPROBE(tcp_v4_connect, struct sock *sk)
 {
 
+	/*
 	char comm[TASK_COMM_LEN];
 	u64 timestamp = bpf_ktime_get_ns();
 	struct data_t *ptr;
@@ -484,7 +509,10 @@ int BPF_KPROBE(tcp_v4_connect, struct sock *sk)
 	bpf_printk("tcp_v4_connect call: %s; PID = : %d, Time: %d\n", comm, pid, timestamp);
 	bpf_printk("tcp_v4_connect: Sys: %d, Time: %d\n", ptr->syscall_id, ptr->starttime_ns);
 
-	// return trace_connect(sk);
+	return 0;
+	*/
+
+	return trace_connect(sk);
 	return 0;
 }
 
@@ -492,6 +520,7 @@ SEC("kretprobe/tcp_v4_connect")
 int BPF_KPROBE(tcp_v4_connect_ret, int ret)
 {
 
+	/*
 	char comm[TASK_COMM_LEN];
 	u64 timestamp = bpf_ktime_get_ns();
 	u64 current_pid_tgid = bpf_get_current_pid_tgid();
@@ -546,6 +575,7 @@ int BPF_KPROBE(tcp_v4_connect_ret, int ret)
 
 	bpf_get_current_comm(&event->comm, sizeof(event->comm));
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(struct func_data_event_t));
+	*/
 
 	return 0;
 }
@@ -559,12 +589,55 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 	u32 pid = current_pid_tgid >> 32;
 	u64 current_uid_gid = bpf_get_current_uid_gid();
 	u32 uid = current_uid_gid;
+	struct piddata *piddatap;
+	s64 delta;
+	u64 ts;
 
-	struct task_struct *task;
-	task = bpf_get_current_task_btf();
-	if (task->pid != pid)
+	int state = BPF_CORE_READ(sk, __sk_common.skc_state);
+
+	/*
+enum {
+	TCP_ESTABLISHED = 1,
+	TCP_SYN_SENT = 2,
+	TCP_SYN_RECV = 3,
+	TCP_FIN_WAIT1 = 4,
+	TCP_FIN_WAIT2 = 5,
+	TCP_TIME_WAIT = 6,
+	TCP_CLOSE = 7,
+	TCP_CLOSE_WAIT = 8,
+	TCP_LAST_ACK = 9,
+	TCP_LISTEN = 10,
+	TCP_CLOSING = 11,
+	TCP_NEW_SYN_RECV = 12,
+	TCP_MAX_STATES = 13,
+};
+	*/
+
+	if (state != TCP_LAST_ACK)
+	{
+		bpf_printk("STATE - OUT: %d\n", state);
+
 		return 0;
+	}
 
+	bpf_printk("STATE - IN: %d\n", state);
+
+	piddatap = bpf_map_lookup_elem(&start, &sk);
+	if (!piddatap)
+	{
+		bpf_printk("PID...: %d\n", state);
+		return 0;
+	}
+
+	ts = bpf_ktime_get_ns();
+	delta = (s64)(ts - piddatap->ts);
+	if (delta < 0)
+	{
+		bpf_printk("DELTA - OUT: %d\n", delta);
+		goto cleanup;
+	}
+
+	// check if it's kamailio
 	bpf_get_current_comm(&comm, sizeof(comm));
 	int foundKamailio = 0;
 
@@ -574,25 +647,23 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 		foundKamailio = 1;
 	}
 
-	// if (foundKamailio == 0)
-	//{
-	//	return 1;
-	// }
-
-	struct data_t *ptr;
-	ptr = bpf_task_storage_get(&enter_id, task, NULL, BPF_LOCAL_STORAGE_GET_F_CREATE);
-	if (!ptr)
-		return 0;
-
-	__u64 cookie = bpf_get_attach_cookie(ctx);
-
-	int state = BPF_CORE_READ(sk, __sk_common.skc_state);
-
-	if (state != TCP_SYN_SENT)
+	if (foundKamailio == 0)
 	{
-		bpf_printk("tcp_rcv_state_process - state: %d\n", state);
-		return 0;
+
+		if (bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_num)) == 5060 || bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_dport)) == 5060)
+		{
+			foundKamailio = 1;
+		}
 	}
+
+	if (foundKamailio == 0)
+	{
+		bpf_printk("DELTA - NONKAMA: [%s]\n", comm);
+		goto cleanup;
+	}
+
+	// Cookie for the future
+	//__u64 cookie = bpf_get_attach_cookie(ctx);
 
 	struct netevent_t *event = create_net_event(current_pid_tgid, timestamp);
 	if (event == NULL)
@@ -601,11 +672,12 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 	}
 
 	bpf_printk("tcp_rcv_state_process [1] - state: %d\n", state);
-
-	event->ts_us = timestamp / 1000;
+	event->delta_us = delta / 1000;
+	event->ts_us = ts / 1000;
 	event->lport = bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_num));
 	event->dport = bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_dport));
 	event->af = BPF_CORE_READ(sk, __sk_common.skc_family);
+	bpf_get_current_comm(&event->comm, sizeof(comm));
 
 	bpf_printk("tcp_rcv_state_process PID: %d, TID :%d, TS: %d\n", event->pid, event->tid, event->ts_us);
 	bpf_printk("tcp_rcv_state_process === PID: %d\n", pid);
@@ -617,22 +689,112 @@ int BPF_KPROBE(tcp_rcv_state_process, struct sock *sk)
 		bpf_printk("tcp_rcv_state_process Port: %d, Dport:%d, Af:%d\n", event->lport, event->dport, event->af);
 		bpf_printk("tcp_rcv_state_process SA: %d, DA: :%d, TS: %d\n", event->saddr_v4, event->daddr_v4, event->ts_us);
 	}
-	/*
 	else
 	{
-		BPF_CORE_READ_INTO(&event->saddr_v6, sk,
-						   __sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
-		BPF_CORE_READ_INTO(&event->daddr_v6, sk,
-						   __sk_common.skc_v6_daddr.in6_u.u6_addr32);
+		BPF_CORE_READ_INTO(&event->saddr_v6, sk, __sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
+		BPF_CORE_READ_INTO(&event->daddr_v6, sk, __sk_common.skc_v6_daddr.in6_u.u6_addr32);
 	}
-	*/
-
-	// bpf_printk("tcp_rcv_state_process Latency: %d, Exit code:%d, CPU:%d\n", event->latency_ns, task->exit_code, task->recent_used_cpu);
-	// bpf_printk("Cookie: %lld, State: %d\n", event->cookie, state);
-	// bpf_get_current_comm(&event->comm, sizeof(event->comm));
-	// bpf_perf_event_output(ctx, &netevents, BPF_F_CURRENT_CPU, &event, sizeof(event));
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(struct netevent_t));
 
-	// return trace_connect(sk);
+cleanup:
+	bpf_map_delete_elem(&start, &sk);
+	return 0;
+}
+
+SEC("tracepoint/sock/inet_sock_set_state")
+int handle_set_state(struct trace_event_raw_inet_sock_set_state *ctx)
+{
+	bpf_printk("inet_sock_set_state [1] - state\n");
+	char comm[TASK_COMM_LEN];
+	u64 current_pid_tgid = bpf_get_current_pid_tgid();
+	u32 pid = current_pid_tgid >> 32;
+	u64 current_uid_gid = bpf_get_current_uid_gid();
+	u32 uid = current_uid_gid;
+
+	struct sock *sk = (struct sock *)ctx->skaddr;
+	__u64 *tsp, delta_us, ts;
+
+	if (ctx->protocol != IPPROTO_TCP)
+	{
+		return 0;
+	}
+
+	tsp = bpf_map_lookup_elem(&timestamps, &sk);
+	ts = bpf_ktime_get_ns();
+	if (!tsp)
+		delta_us = 0;
+	else
+		delta_us = (ts - *tsp) / 1000;
+
+	int state = state = ctx->newstate;
+
+	bpf_get_current_comm(&comm, sizeof(comm));
+	int foundKamailio = 0;
+
+	if (comm[0] == 'k' && comm[1] == 'a' && comm[2] == 'm' && comm[3] == 'a' && comm[4] == 'i' && comm[5] == 'l' &&
+		comm[6] == 'i' && comm[7] == 'o' && comm[8] == '\0')
+	{
+		foundKamailio = 1;
+	}
+	else if (bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_num)) == 5060 || bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_dport)) == 5060)
+	{
+		foundKamailio = 1;
+	}
+
+	if (foundKamailio == 0)
+	{
+		bpf_printk("DELTA - NONKAMA: [%s]\n", comm);
+		goto cleanup;
+	}
+
+	// Found kamailio ... or another application
+	if (foundKamailio == 1)
+	{
+		struct netevent_t *event = create_net_event(current_pid_tgid, ts);
+		if (event == NULL)
+		{
+			goto cleanup;
+		}
+
+		bpf_printk("tcp_rcv_state_process [1] - state: %d, comm: %s\n", state, comm);
+		event->delta_us = delta_us;
+		event->ts_us = ts / 1000;
+		event->lport = bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_num));
+		event->dport = bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_dport));
+		event->af = BPF_CORE_READ(sk, __sk_common.skc_family);
+		event->oldstate = ctx->oldstate;
+		event->newstate = ctx->newstate;
+		bpf_get_current_comm(&event->comm, sizeof(comm));
+
+		bpf_printk("tcp_rcv_state_process PID: %d, TID :%d, TS: %d\n", event->pid, event->tid, event->ts_us);
+		bpf_printk("tcp_rcv_state_process === PID: %d\n", pid);
+
+		if (event->af == AF_INET)
+		{
+			event->saddr_v4 = bpf_ntohl(BPF_CORE_READ(sk, __sk_common.skc_rcv_saddr));
+			event->daddr_v4 = bpf_ntohl(BPF_CORE_READ(sk, __sk_common.skc_daddr));
+			bpf_printk("tcp_rcv_state_process Port: %d, Dport:%d, Af:%d\n", event->lport, event->dport, event->af);
+			bpf_printk("tcp_rcv_state_process SA: %d, DA: :%d, TS: %d\n", event->saddr_v4, event->daddr_v4, event->ts_us);
+		}
+		else
+		{
+			BPF_CORE_READ_INTO(&event->saddr_v6, sk, __sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
+			BPF_CORE_READ_INTO(&event->daddr_v6, sk, __sk_common.skc_v6_daddr.in6_u.u6_addr32);
+		}
+		bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(struct netevent_t));
+	}
+
+	if (ctx->newstate == TCP_CLOSE)
+	{
+		bpf_map_delete_elem(&timestamps, &sk);
+		bpf_printk("inet_sock_set_state close - state : %s\n", comm);
+	}
+	else
+		bpf_map_update_elem(&timestamps, &sk, &ts, BPF_ANY);
+
+	bpf_printk("inet_sock_set_state [2] - state\n");
+
+cleanup:
+	bpf_map_delete_elem(&timestamps, &sk);
 	return 0;
 }

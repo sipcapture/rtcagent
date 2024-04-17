@@ -49,4 +49,5 @@ type IEventStruct interface {
 	EventType() EventType
 	GetUUID() string
 	GenerateMetric() model.AggregatedMetricValue
+	GenerateTimeMetric() model.AggregatedTimeMetricValue
 }

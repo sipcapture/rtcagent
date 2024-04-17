@@ -135,3 +135,8 @@ func (tcpev *TcprttEvent) GenerateMetric() model.AggregatedMetricValue {
 
 	return model.AggregatedMetricValue{}
 }
+
+func (tcpev *TcprttEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
+}

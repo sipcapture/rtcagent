@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -88,7 +87,7 @@ func (p *Prometheus) setup() (err error) {
 			log.Fatal(err)
 		}
 
-		fmt.Println(`{"server_state":"listening"}`)
+		//fmt.Println(`{"server_state":"listening"}`)
 		log.Fatal(p.s.Serve(l))
 	}()
 
@@ -98,7 +97,9 @@ func (p *Prometheus) setup() (err error) {
 func (p *Prometheus) expose(hCh chan model.AggregatedMetricValue) {
 	for pkt := range hCh {
 
-		fmt.Println(pkt.Name)
-		latencyTCP.WithLabelValues(pkt.Labels...).Set(pkt.Value)
+		//fmt.Println(pkt.Name)
+		if pkt.IntType == 2 {
+			latencyTCP.WithLabelValues(pkt.Labels...).Set(pkt.Value)
+		}
 	}
 }

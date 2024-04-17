@@ -55,11 +55,14 @@ type MonitorConfig struct {
 	VersionInfo    string      // info
 	UserFunctions  []string    // user functions
 	PromCh         chan model.AggregatedMetricValue
+	UiCh           chan model.AggregatedTimeMetricValue
 }
 
 func NewMonitorConfig() *MonitorConfig {
 	config := &MonitorConfig{}
 	config.PromCh = make(chan model.AggregatedMetricValue, 500)
+	config.UiCh = make(chan model.AggregatedTimeMetricValue, 500)
+
 	return config
 }
 

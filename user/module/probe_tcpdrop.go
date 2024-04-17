@@ -125,6 +125,11 @@ func (this *MTcprttProbe) start() error {
 	return nil
 }
 
+func (this *MTcprttProbe) MakeUI() error {
+
+	return nil
+}
+
 func (this *MTcprttProbe) Close() error {
 
 	this.linkData.Close()

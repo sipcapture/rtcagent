@@ -267,3 +267,8 @@ func (kem *KamailioEvent) GenerateMetric() model.AggregatedMetricValue {
 
 	return model.AggregatedMetricValue{}
 }
+
+func (kem *KamailioEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
+}

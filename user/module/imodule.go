@@ -65,6 +65,9 @@ type IModule interface {
 	DecodeFun(p *ebpf.Map) (event.IEventStruct, bool)
 
 	Dispatcher(event.IEventStruct)
+
+	//Make
+	MakeUI() error
 }
 
 const KernelLess52Prefix = "_less52.o"
@@ -109,6 +112,10 @@ func (this *Module) geteBPFName(filename string) string {
 
 func (this *Module) SetChild(module IModule) {
 	this.child = module
+}
+
+func (this *Module) MakeUI() error {
+	panic("Module.MakeUI() not implemented yet")
 }
 
 func (this *Module) Start() error {
@@ -156,6 +163,7 @@ func (this *Module) Stop() error {
 
 // Stop shuts down Module
 func (this *Module) run() {
+
 	for {
 		select {
 		case _ = <-this.ctx.Done():

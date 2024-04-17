@@ -214,6 +214,11 @@ func (kem *FreeSwitchEvent) GenerateMetric() model.AggregatedMetricValue {
 	return model.AggregatedMetricValue{}
 }
 
+func (tcpev *FreeSwitchEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
+}
+
 func (kem *FreeSwitchEvent) Clone() IEventStruct {
 	event := new(FreeSwitchEvent)
 	event.event_type = EventTypeEventProcessor

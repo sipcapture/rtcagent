@@ -231,3 +231,8 @@ func (kem *OpensipsEvent) GenerateMetric() model.AggregatedMetricValue {
 
 	return model.AggregatedMetricValue{}
 }
+
+func (kem *OpensipsEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
+}

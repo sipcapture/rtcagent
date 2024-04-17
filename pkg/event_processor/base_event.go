@@ -202,6 +202,11 @@ func (be *BaseEvent) GenerateMetric() model.AggregatedMetricValue {
 	return model.AggregatedMetricValue{}
 }
 
+func (be *BaseEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
+}
+
 func CToGoString(c []byte) string {
 	n := -1
 	for i, b := range c {

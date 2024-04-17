@@ -65,6 +65,11 @@ func (this *MKamailioProbe) Start() error {
 	return nil
 }
 
+func (this *MKamailioProbe) MakeUI() error {
+
+	return nil
+}
+
 func (this *MKamailioProbe) start() error {
 
 	// fetch ebpf assets

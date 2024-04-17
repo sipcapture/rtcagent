@@ -100,6 +100,11 @@ func (this *MOpensipsProbe) start() error {
 	return nil
 }
 
+func (this *MOpensipsProbe) MakeUI() error {
+
+	return nil
+}
+
 func (this *MOpensipsProbe) Close() error {
 	if err := this.bpfManager.Stop(manager.CleanAll); err != nil {
 		return fmt.Errorf("couldn't stop manager %v", err)

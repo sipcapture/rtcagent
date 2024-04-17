@@ -65,6 +65,11 @@ func (this *MFreeSwitchProbe) Start() error {
 	return nil
 }
 
+func (this *MFreeSwitchProbe) MakeUI() error {
+
+	return nil
+}
+
 func (this *MFreeSwitchProbe) start() error {
 
 	// fetch ebpf assets
