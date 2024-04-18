@@ -54,6 +54,7 @@ func init() {
 	monitorCmd.PersistentFlags().BoolVarP(&monitorConfig.UserCall, "usercall", "", false, "monitor usercall")
 	monitorCmd.PersistentFlags().BoolVarP(&monitorConfig.NetworkCall, "networkcall", "", false, "monitor networkcall")
 	monitorCmd.PersistentFlags().StringSliceVarP(&monitorConfig.UserFunctions, "functions", "f", nil, "monitor user functions")
+	monitorCmd.PersistentFlags().BoolVarP(&monitorConfig.ShowUserFunction, "show-user-functions", "", false, "show user functions")
 
 	rootCmd.AddCommand(monitorCmd)
 }

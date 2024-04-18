@@ -45,17 +45,18 @@ const (
 // tcprtt
 type MonitorConfig struct {
 	eConfig
-	Monitorpath    string      `json:"monitPath"`
-	SysCall        bool        //
-	UserCall       bool        //
-	NetworkCall    bool        //
-	NetworkLatency bool        //
-	ElfType        uint8       //
-	Version        MonitorType //
-	VersionInfo    string      // info
-	UserFunctions  []string    // user functions
-	PromCh         chan model.AggregatedMetricValue
-	UiCh           chan model.AggregatedTimeMetricValue
+	Monitorpath      string      `json:"monitPath"`
+	SysCall          bool        //
+	UserCall         bool        //
+	NetworkCall      bool        //
+	ShowUserFunction bool        //
+	NetworkLatency   bool        //
+	ElfType          uint8       //
+	Version          MonitorType //
+	VersionInfo      string      // info
+	UserFunctions    []string    // user functions
+	PromCh           chan model.AggregatedMetricValue
+	UiCh             chan model.AggregatedTimeMetricValue
 }
 
 func NewMonitorConfig() *MonitorConfig {

@@ -32,10 +32,12 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/exec"
 	"rtcagent/assets"
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 	"sort"
+	"strings"
 	"time"
 
 	"rtcagent/model"
@@ -248,6 +250,7 @@ func (this *MMonitorProbe) setupManagers() error {
 	userFunction := this.conf.(*config.MonitorConfig).UserFunctions
 	this.promCh = this.conf.(*config.MonitorConfig).PromCh
 	this.uiCh = this.conf.(*config.MonitorConfig).UiCh
+	showUserFunction := this.conf.(*config.MonitorConfig).ShowUserFunction
 
 	switch this.conf.(*config.MonitorConfig).ElfType {
 	case config.ElfTypeBin:
@@ -264,6 +267,28 @@ func (this *MMonitorProbe) setupManagers() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if showUserFunction {
+		cmd := exec.Command("/usr/bin/readelf", "-Ws", binaryPath)
+		stdout, err := cmd.Output()
+
+		if err != nil {
+			fmt.Println(err.Error())
+			return err
+		}
+
+		dataArray := strings.Split(strings.ReplaceAll(string(stdout), "\r\n", "\n"), "\n")
+
+		for _, val := range dataArray {
+
+			if strings.Contains(val, "FUNC") && !strings.Contains(val, "GLIBC") {
+				fmt.Printf("%s %s %s\r\n", event.COLORCYAN, val, event.COLORRESET)
+			}
+		}
+		// Print the output
+		os.Exit(0)
+
 	}
 
 	var probes = []*manager.Probe{}
