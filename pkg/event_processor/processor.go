@@ -66,7 +66,9 @@ func (ep *EventProcessor) Serve() {
 }
 
 func (ep *EventProcessor) dispatch(e event.IEventStruct) {
-	ep.logger.Printf("event ID:%s", e.String())
+	ep.logger.Printf("event ==== ID:%s", e.String())
+
+	//fmt.Printf("event ==== ID:%s\n", e.String())
 
 	if e.SendHep() {
 		ep.logger.Printf("LETS SEND HEP\n")

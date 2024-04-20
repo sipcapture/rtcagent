@@ -65,6 +65,9 @@ type IModule interface {
 	DecodeFun(p *ebpf.Map) (event.IEventStruct, bool)
 
 	Dispatcher(event.IEventStruct)
+
+	//Make
+	MakeUI() error
 }
 
 const KernelLess52Prefix = "_less52.o"
@@ -109,6 +112,10 @@ func (this *Module) geteBPFName(filename string) string {
 
 func (this *Module) SetChild(module IModule) {
 	this.child = module
+}
+
+func (this *Module) MakeUI() error {
+	panic("Module.MakeUI() not implemented yet")
 }
 
 func (this *Module) Start() error {
@@ -156,6 +163,7 @@ func (this *Module) Stop() error {
 
 // Stop shuts down Module
 func (this *Module) run() {
+
 	for {
 		select {
 		case _ = <-this.ctx.Done():
@@ -200,6 +208,7 @@ func (this *Module) perfEventReader(errChan chan error, em *ebpf.Map) {
 		errChan <- fmt.Errorf("creating %s reader dns: %s", em.String(), err)
 		return
 	}
+
 	this.reader = append(this.reader, rd)
 	go func() {
 		for {
@@ -232,7 +241,7 @@ func (this *Module) perfEventReader(errChan chan error, em *ebpf.Map) {
 			}
 
 			//
-			this.Dispatcher(e)
+			this.child.Dispatcher(e)
 		}
 	}()
 }
@@ -243,6 +252,7 @@ func (this *Module) ringbufEventReader(errChan chan error, em *ebpf.Map) {
 		errChan <- fmt.Errorf("%s\tcreating %s reader dns: %s", this.child.Name(), em.String(), err)
 		return
 	}
+
 	this.reader = append(this.reader, rd)
 	go func() {
 		for {
@@ -293,8 +303,10 @@ func (this *Module) Decode(em *ebpf.Map, b []byte) (event event.IEventStruct, er
 }
 
 func (this *Module) Dispatcher(e event.IEventStruct) {
+
 	switch e.EventType() {
 	case event.EventTypeOutput:
+
 		if this.conf.GetHex() {
 			this.logger.Println(e.StringHex())
 		} else {

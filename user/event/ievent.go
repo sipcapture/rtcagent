@@ -19,6 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package event
 
+import (
+	"rtcagent/model"
+)
+
 type EventType uint8
 
 const (
@@ -38,9 +42,12 @@ type IEventStruct interface {
 	PayloadLen() int
 	GenerateHEP() ([]byte, error)
 	String() string
+	DoCorrelation(userFunctionArray []string) bool
 	SendHep() bool
 	StringHex() string
 	Clone() IEventStruct
 	EventType() EventType
 	GetUUID() string
+	GenerateMetric() model.AggregatedMetricValue
+	GenerateTimeMetric() model.AggregatedTimeMetricValue
 }

@@ -19,11 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-
+#include "common2.h"
 #include "bpf/bpf_endian.h"
 #include "bpf/bpf_tracing.h"
 
-#include "common2.h"
 
 #define AF_INET 2
 

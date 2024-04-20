@@ -27,6 +27,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"rtcagent/model"
 )
 
 type TcprttEvent struct {
@@ -122,4 +123,20 @@ func (tcpev *TcprttEvent) Clone() IEventStruct {
 
 func (tcpev *TcprttEvent) EventType() EventType {
 	return 0
+}
+
+func (tcpev *TcprttEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	return false
+}
+
+func (tcpev *TcprttEvent) GenerateMetric() model.AggregatedMetricValue {
+	//Lets allow to send HEP
+
+	return model.AggregatedMetricValue{}
+}
+
+func (tcpev *TcprttEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
 }

@@ -35,6 +35,7 @@ const (
 	ModuleNameFreeSwitch = "EBPFProbeFreeSwitch"
 	ModuleNameTcprtt     = "EBPFProbeTcprtt"
 	ModuleNameOpensips   = "EBPFProbeOpensips"
+	ModuleNameMonitor    = "EBPFProbeMonitor"
 )
 
 const (

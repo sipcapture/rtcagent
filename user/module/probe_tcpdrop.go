@@ -34,10 +34,10 @@ import (
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 
+	manager "github.com/adubovikov/ebpfmanager"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
-	manager "github.com/gojue/ebpfmanager"
 	"golang.org/x/sys/unix"
 )
 
@@ -121,6 +121,11 @@ func (this *MTcprttProbe) start() error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (this *MTcprttProbe) MakeUI() error {
 
 	return nil
 }

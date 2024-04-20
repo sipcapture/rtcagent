@@ -27,6 +27,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"rtcagent/model"
 	"rtcagent/outdata/hep"
 	monotonic "rtcagent/user/time"
 )
@@ -255,4 +256,19 @@ func (kem *KamailioEvent) Clone() IEventStruct {
 
 func (kem *KamailioEvent) EventType() EventType {
 	return kem.event_type
+}
+
+func (kem *KamailioEvent) DoCorrelation(userFunctionArray []string) bool {
+	return false
+}
+
+func (kem *KamailioEvent) GenerateMetric() model.AggregatedMetricValue {
+	//Lets allow to send HEP
+
+	return model.AggregatedMetricValue{}
+}
+
+func (kem *KamailioEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
 }

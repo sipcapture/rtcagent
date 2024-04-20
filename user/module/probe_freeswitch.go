@@ -36,8 +36,8 @@ import (
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 
+	manager "github.com/adubovikov/ebpfmanager"
 	"github.com/cilium/ebpf"
-	manager "github.com/gojue/ebpfmanager"
 	"golang.org/x/sys/unix"
 )
 
@@ -62,6 +62,11 @@ func (this *MFreeSwitchProbe) Start() error {
 	if err := this.start(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (this *MFreeSwitchProbe) MakeUI() error {
+
 	return nil
 }
 

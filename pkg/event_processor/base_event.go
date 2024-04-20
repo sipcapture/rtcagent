@@ -25,6 +25,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"rtcagent/model"
 	"rtcagent/user/event"
 )
 
@@ -189,6 +190,21 @@ func (be *BaseEvent) GenerateHEP() ([]byte, error) {
 
 func (be *BaseEvent) EventType() event.EventType {
 	return be.event_type
+}
+
+func (be *BaseEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	return false
+}
+
+func (be *BaseEvent) GenerateMetric() model.AggregatedMetricValue {
+
+	return model.AggregatedMetricValue{}
+}
+
+func (be *BaseEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
 }
 
 func CToGoString(c []byte) string {

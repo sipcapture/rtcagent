@@ -27,6 +27,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"rtcagent/model"
 	"rtcagent/outdata/hep"
 	monotonic "rtcagent/user/time"
 )
@@ -207,6 +208,17 @@ func (kem *FreeSwitchEvent) GenerateHEP() ([]byte, error) {
 
 }
 
+func (kem *FreeSwitchEvent) GenerateMetric() model.AggregatedMetricValue {
+	//Lets allow to send HEP
+
+	return model.AggregatedMetricValue{}
+}
+
+func (tcpev *FreeSwitchEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue {
+
+	return model.AggregatedTimeMetricValue{}
+}
+
 func (kem *FreeSwitchEvent) Clone() IEventStruct {
 	event := new(FreeSwitchEvent)
 	event.event_type = EventTypeEventProcessor
@@ -215,4 +227,9 @@ func (kem *FreeSwitchEvent) Clone() IEventStruct {
 
 func (kem *FreeSwitchEvent) EventType() EventType {
 	return kem.event_type
+}
+
+func (kem *FreeSwitchEvent) DoCorrelation(userFunctionArray []string) bool {
+
+	return false
 }
