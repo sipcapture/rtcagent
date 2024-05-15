@@ -42,7 +42,7 @@ var opensipsConfig = config.NewOpensipsConfig()
 // opensipsCmd represents the opensips command
 var opensipsCmd = &cobra.Command{
 	Use:   "opensips",
-	Short: "capture SIP messages from opensips: recv_msg, udp_send, tcp_send.",
+	Short: "capture SIP messages from opensips: proto_tcp_send, proto_udp_send, receive_msg.",
 	Long:  ` Tested on opensips 3.x`,
 	Run:   opensipsCommandFunc,
 }
