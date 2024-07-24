@@ -42,7 +42,7 @@ if [[ ${UNAME_M} =~ "x86_64" ]];then
     echo "unsupported arch ${UNAME_M}";
 fi
 
-GOBIN_ZIP="go1.20.4.linux-${ARCH}.tar.gz"
+GOBIN_ZIP="go1.21.12.linux-${ARCH}.tar.gz"
 echo "GOBIN_ZIP:${GOBIN_ZIP}"
 
 cd ~
@@ -60,12 +60,17 @@ done
 
 clang --version
 
-# install golang
-wget https://go.dev/dl/${GOBIN_ZIP}
-sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ${GOBIN_ZIP}
-export PATH=/usr/local/go/bin:$PATH
+
+if ! command -v go /dev/null
+then
+    # install golang
+    wget https://go.dev/dl/${GOBIN_ZIP}
+    sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ${GOBIN_ZIP}
+    export PATH=/usr/local/go/bin:$PATH
+fi
 
 # clone repo
 git clone https://github.com//sipcapture/rtcagent.git
 cd ./rtcagent || exit
+go mod tidy
 ${MAKE_RTCAGENT}
