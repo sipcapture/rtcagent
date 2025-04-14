@@ -1,8 +1,7 @@
 module rtcagent
 
 go 1.21
-
-toolchain go1.22.1
+toolchain go1.24.1
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.2
@@ -14,8 +13,8 @@ require (
 	github.com/shuLhan/go-bindata v4.0.0+incompatible
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/crypto v0.21.0
-	golang.org/x/sys v0.18.0
+	golang.org/x/crypto v0.35.0
+	golang.org/x/sys v0.30.0
 )
 
 require (
