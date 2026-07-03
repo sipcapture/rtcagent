@@ -1,0 +1,29 @@
+# nfpm config for CI / release packaging (paths relative to repo root).
+name: "rtcagent"
+arch: "amd64"
+platform: "linux"
+version: "${VERSION}"
+section: "default"
+priority: "extra"
+# No replaces/provides self-refs: Packagecloud has returned 500 on upload for this pattern;
+# they are redundant when the package name is already rtcagent.
+
+maintainer: "QXIP <support@qxip.net>"
+description: |
+    RTCagent eBPF HEP capture agent under AGPL-3.0
+vendor: "QXIP"
+homepage: "https://github.com/sipcapture/rtcagent"
+# license omitted on purpose: nfpm writes "License:" into deb control; Packagecloud
+# has rejected uploads with that non-standard field (500). SPDX remains in description.
+contents:
+  - src: ./bin/rtcagent
+    dst: /usr/local/rtcagent/bin/rtcagent
+  - src: ./examples/README
+    dst: /usr/local/rtcagent/log/README
+  - src: ./examples/rtcagent.service
+    dst: /etc/systemd/system/rtcagent.service
+  - src: ./examples/rtcagent.init
+    dst: /etc/init.d/rtcagent
+  - src: ./examples/rtcagent.env.example
+    dst: /usr/local/rtcagent/etc/rtcagent.env.example
+    type: config

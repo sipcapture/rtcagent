@@ -1,0 +1,20 @@
+
+# cp rtcagent.service /etc/systemd/system/
+# systemctl daemon-reload
+# systemctl start rtcagent
+# systemctl enable rtcagent
+
+[Unit]
+Description=RTCagent eBPF HEP capture agent
+Documentation=https://github.com/sipcapture/rtcagent
+After=network.target
+
+[Service]
+EnvironmentFile=-/usr/local/rtcagent/etc/rtcagent.env
+ExecStart=/usr/local/rtcagent/bin/rtcagent ${RTCAGENT_MODE} -m ${RTCAGENT_APP_PATH} --hep-server=${HEP_SERVER} --hep-port=${HEP_PORT} --hep-transport=${HEP_TRANSPORT}
+Restart=always
+RestartSec=3s
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

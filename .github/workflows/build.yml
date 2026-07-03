@@ -35,25 +35,27 @@ jobs:
         
     - name: Patch NFPM Version
       run: |
-          sudo sed -i "s/0.0.0/${{ github.ref_name }}/g" rtcagent.yml
+          export VERSION="${{ github.ref_name }}"
+          export VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
     - name: Create deb package
       id: nfpm-deb
       uses: burningalchemist/nfpm-action@v1
       env:
-          VERSION: ${{ github.event.release.tag_name }}
+          VERSION: ${{ env.VERSION }}
       with:
           packager: deb
-          config: rtcagent.yml
-          target: rtcagent_${{  github.ref_name }}_all.deb
+          config: rtcagent_workflow.yaml
+          target: rtcagent_${{ env.VERSION }}_amd64.deb
     - name: Create rpm package
       id: nfpm-rpm
       uses: burningalchemist/nfpm-action@v1
       env:
-          VERSION: ${{ github.event.release.tag_name }}
+          VERSION: ${{ env.VERSION }}
       with:
           packager: rpm
-          config: rtcagent.yml
-          target: rtcagent_${{  github.ref_name }}.amd64.rpm
+          config: rtcagent_workflow.yaml
+          target: rtcagent_${{ env.VERSION }}.amd64.rpm
           
     - name: Upload Release
       if: github.event_name != 'pull_request'
@@ -63,8 +65,8 @@ jobs:
       with:
           release_config: |
               ./bin/rtcagent
-              ./rtcagent_${{ github.ref_name }}_all.deb
-              ./rtcagent_${{ github.ref_name }}.amd64.rpm
+              ./rtcagent_${{ env.VERSION }}_amd64.deb
+              ./rtcagent_${{ env.VERSION }}.amd64.rpm
           tag_name: ${{ github.ref_name }}
           release_name: rtcagent_${{ github.ref_name }}
           draft: false

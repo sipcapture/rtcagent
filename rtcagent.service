@@ -4,8 +4,8 @@ Wants=network.target
 After=network.target
 
 [Service]
-#this service file uses Kamailio binary for FreeSWITCH change the command accordingly
-ExecStart=/usr/bin/rtcagent kamailio -m /opt/kamailio/sbin/kamailio --hep-server="127.0.0.1" --hep-port="9060" --hep-transport="tcp" --debug=false
+# Packaged install: see examples/rtcagent.service and /usr/local/rtcagent/etc/rtcagent.env
+ExecStart=/usr/local/rtcagent/bin/rtcagent kamailio -m /usr/sbin/kamailio --hep-server="127.0.0.1" --hep-port="9060" --hep-transport="udp" --debug=false
 ExecStop=/bin/kill ${MAINPID}
 Restart=on-failure
 RestartSec=10s
