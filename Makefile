@@ -191,6 +191,7 @@ TARGETS += kern/freeswitch
 TARGETS += kern/tcprtt
 TARGETS += kern/opensips
 TARGETS += kern/monitor
+TARGETS += kern/rtpengine
 
 # Generate file name-scheme based on TARGETS
 KERN_SOURCES = ${TARGETS:=_kern.c}
