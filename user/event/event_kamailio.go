@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"net"
 	"rtcagent/model"
 	"rtcagent/outdata/hep"
 	monotonic "rtcagent/user/time"
@@ -177,8 +176,8 @@ func (kem *KamailioEvent) String() string {
 		panic(err)
 	}
 
-	srcIP := net.IP(t.SrcIP.Addr[:4])
-	dstIP := net.IP(t.DstIP.Addr[:4])
+	srcIP := netIPFromAddr(t.SrcIP)
+	dstIP := netIPFromAddr(t.DstIP)
 	addr := fmt.Sprintf("%s:%d", srcIP.String(), t.SrcPort)
 
 	date := monotonic.GetRealTime(kem.Timestamp)
@@ -218,23 +217,12 @@ func (kem *KamailioEvent) GenerateHEP() ([]byte, error) {
 		panic(err)
 	}
 
-	srcIP := net.IP(t.SrcIP.Addr[:4])
-	dstIP := net.IP(t.DstIP.Addr[:4])
+	srcIP := netIPFromAddr(t.SrcIP)
+	dstIP := netIPFromAddr(t.DstIP)
 
 	date := monotonic.GetRealTime(kem.Timestamp)
 
-	hepPacket := hep.Packet{
-		Version:   0x02,
-		Protocol:  22,
-		SrcIP:     srcIP,
-		DstIP:     dstIP,
-		SrcPort:   t.SrcPort,
-		DstPort:   t.DstPort,
-		Tsec:      uint32(date.Unix()),
-		Tmsec:     uint32(date.UnixMilli() - (date.Unix() * 1000)),
-		ProtoType: 1,
-		Payload:   kem.Data[:kem.DataLen],
-	}
+	hepPacket := buildSipHepPacket(hepIPVersion(t.SrcIP), 22, srcIP, dstIP, t.SrcPort, t.DstPort, date, kem.Data[:kem.DataLen])
 
 	return hep.EncodeHEP(&hepPacket)
 

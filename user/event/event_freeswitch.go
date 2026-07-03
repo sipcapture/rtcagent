@@ -190,6 +190,7 @@ func (kem *FreeSwitchEvent) GenerateHEP() ([]byte, error) {
 	dstIP := net.IP(dst.IP.Addr[:4])
 
 	date := monotonic.GetRealTime(kem.Timestamp)
+	tsec, tmsec := hepTimestampFields(date)
 
 	hepPacket := hep.Packet{
 		Version:   0x02,
@@ -198,8 +199,8 @@ func (kem *FreeSwitchEvent) GenerateHEP() ([]byte, error) {
 		DstIP:     dstIP,
 		SrcPort:   dst.Port,
 		DstPort:   dst.Port,
-		Tsec:      uint32(date.Unix()),
-		Tmsec:     uint32(date.UnixMilli() - (date.Unix() * 1000)),
+		Tsec:      tsec,
+		Tmsec:     tmsec,
 		ProtoType: 1,
 		Payload:   kem.Data[:kem.DataLen],
 	}
