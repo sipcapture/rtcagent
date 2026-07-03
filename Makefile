@@ -304,8 +304,13 @@ $(KERN_OBJECTS): %.o: %.c \
 		-MD -MP
 
 .PHONY: autogen
+ifdef SKIP_AUTOGEN
+autogen:
+	@test -s kern/bpf/$(LINUX_ARCH)/vmlinux.h || (echo "missing kern/bpf/$(LINUX_ARCH)/vmlinux.h" && exit 1)
+else
 autogen: .checkver_$(CMD_BPFTOOL)
 	$(AUTOGENCMD)
+endif
 
 .PHONY: ebpf
 ebpf: autogen $(KERN_OBJECTS)
