@@ -21,9 +21,11 @@ jobs:
       with:
         go-version: 1.21
     - name: Setup Build Env
-      run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com//sipcapture/rtcagent/master/builder/init_env.sh)"
+      run: bash builder/init_env.sh
     - name: Build RTCAgent
-      run: make     
+      run: make
+      env:
+        SKIP_AUTOGEN: 1     
     - name: Compress
       run: |
         strip bin/rtcagent

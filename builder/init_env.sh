@@ -26,8 +26,13 @@ if [ ${release_num} == "20.04" ]; then
   CLANG_NUM=12
   elif [ ${release_num} == "22.10" ]; then
   CLANG_NUM=12
+  elif [ ${release_num} == "24.04" ]; then
+  CLANG_NUM=18
+  elif [ ${release_num} == "24.10" ]; then
+  CLANG_NUM=18
   else
-    echo "unsupported release version ${release_num}" && exit
+  CLANG_NUM=18
+  echo "unknown release ${release_num}, defaulting to clang-${CLANG_NUM}"
 fi
 
 echo "CLANG_NUM=${CLANG_NUM}"
@@ -51,7 +56,19 @@ uname -a
 sudo apt-get update
 
 # install packages
-sudo apt-get install --yes build-essential pkgconf libelf-dev llvm-${CLANG_NUM} clang-${CLANG_NUM} linux-tools-common linux-tools-generic
+sudo apt-get install --yes build-essential pkgconf libelf-dev llvm-${CLANG_NUM} clang-${CLANG_NUM} \
+  linux-tools-common linux-tools-generic upx-ucl
+KVER="$(uname -r)"
+sudo apt-get install -y "linux-tools-${KVER}" 2>/dev/null || \
+  sudo apt-get install -y linux-tools-azure linux-cloud-tools-azure 2>/dev/null || true
+if ! command -v bpftool >/dev/null; then
+  for p in /usr/lib/linux-tools/*/bpftool /usr/sbin/bpftool; do
+    if [ -x "$p" ]; then
+      sudo ln -sf "$p" /usr/local/bin/bpftool
+      break
+    fi
+  done
+fi
 for tool in "clang" "llc" "llvm-strip"
 do
   sudo rm -f /usr/bin/$tool
@@ -59,18 +76,21 @@ do
 done
 
 clang --version
+bpftool version 2>/dev/null || echo "bpftool not available; CI may use SKIP_AUTOGEN=1"
 
 
-if ! command -v go /dev/null
-then
-    # install golang
+if ! command -v go >/dev/null; then
     wget https://go.dev/dl/${GOBIN_ZIP}
     sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf ${GOBIN_ZIP}
     export PATH=/usr/local/go/bin:$PATH
 fi
 
-# clone repo
-git clone https://github.com//sipcapture/rtcagent.git
+if [ "${GITHUB_ACTIONS}" = "true" ]; then
+  echo "CI mode: dependencies installed, skipping clone/build"
+  exit 0
+fi
+
+git clone https://github.com/sipcapture/rtcagent.git
 cd ./rtcagent || exit
 go mod tidy
 ${MAKE_RTCAGENT}
