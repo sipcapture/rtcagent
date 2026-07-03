@@ -1,0 +1,13 @@
+RTCagent packaging examples
+===========================
+
+Starter files for deb/rpm packages built with nfpm (`rtcagent.yaml`,
+`rtcagent_workflow.yaml`).
+
+- `rtcagent.service` — systemd unit (paths under `/usr/local/rtcagent`).
+- `rtcagent.init` — SysV init script for non-systemd hosts.
+- `rtcagent.env.example` — copy to `/usr/local/rtcagent/etc/rtcagent.env` and
+  adjust HEP collector + application paths before enabling the service.
+
+Requires Linux with eBPF (BTF), CAP_BPF / privileged mode, and a supported
+application binary (kamailio, opensips, freeswitch, rtpengine).
