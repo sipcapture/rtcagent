@@ -54,13 +54,11 @@ type OpensipsEvent struct {
 	Timestamp  uint64   `json:"timestamp"`
 	Pid        uint32   `json:"pid"`
 	Tid        uint32   `json:"tid"`
-	RcInfo     [56]byte `json:"rcinfo"`
+	RcInfo     [52]byte `json:"rcinfo"`
 	//RcInfo  ReceiveInfo       `json:"rcinfo"`
 	Data    [MaxDataSize]byte `json:"data"`
 	DataLen int32             `json:"dataLen"`
 	Comm    [16]byte          `json:"Comm"`
-	Fd      uint32            `json:"fd"`
-	Version int32             `json:"version"`
 }
 
 func (kem *OpensipsEvent) Decode(payload []byte) (err error) {
@@ -91,18 +89,12 @@ func (kem *OpensipsEvent) Decode(payload []byte) (err error) {
 	if err = binary.Read(buf, binary.LittleEndian, &kem.Comm); err != nil {
 		return
 	}
-	if err = binary.Read(buf, binary.LittleEndian, &kem.Fd); err != nil {
-		return
-	}
-	if err = binary.Read(buf, binary.LittleEndian, &kem.Version); err != nil {
-		return
-	}
 
 	return nil
 }
 
 func (kem *OpensipsEvent) GetUUID() string {
-	return fmt.Sprintf("%d_%d_%s_%d_%d", kem.Pid, kem.Tid, CToGoString(kem.Comm[:]), kem.Fd, kem.DataType)
+	return fmt.Sprintf("%d_%d_%s_%d", kem.Pid, kem.Tid, CToGoString(kem.Comm[:]), kem.DataType)
 }
 
 func (kem *OpensipsEvent) Payload() []byte {

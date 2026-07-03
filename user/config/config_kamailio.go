@@ -86,21 +86,16 @@ func (this *KamailioConfig) Check() error {
 	this.Version = KamailioType5
 	this.VersionInfo = "kamailio"
 
-	found := strings.Contains("receive_msg", "COM_DATA")
-	if found {
-		roSection := _elf.Section(".rodata")
-		var buf []byte
-		buf, e = roSection.Data()
-		var ver KamailioType
-		var verInfo string
-		if e == nil {
-			ver, verInfo = getKamailioVer(buf)
+	if roSection := _elf.Section(".rodata"); roSection != nil {
+		if buf, e := roSection.Data(); e == nil {
+			if ver, verInfo := getKamailioVer(buf); ver != KamailioTypeUnknow {
+				this.Version = ver
+				this.VersionInfo = verInfo
+			}
 		}
-		this.Version = ver
-		this.VersionInfo = verInfo
 	}
 
-	return nil
+	return requireElfSymbols(this.Kamailiopath, "receive_msg", "udp_send", "tcp_send")
 }
 
 func getKamailioVer(buf []byte) (KamailioType, string) {
