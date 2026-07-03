@@ -51,7 +51,7 @@ type MonitorEvent struct {
 	Type         uint8        `json:"type"`
 	SysEvent     SysEvent     `json:"sys_event"`
 	NetworkEvent NetworkEvent `json:"network_event"`
-	funcName     string       `json:"func_name"`
+	FuncName     string       `json:"func_name"`
 }
 
 type MyEnum int
@@ -242,38 +242,38 @@ func (tcpev *MonitorEvent) Decode(payload []byte) (err error) {
 
 func (tcpev *MonitorEvent) DoCorrelation(userFunctionArray []string) bool {
 
-	tcpev.funcName = "unknown"
+	tcpev.FuncName = "unknown"
 
 	if tcpev.SysEvent.SysCallId == 0 {
-		tcpev.funcName = "read"
+		tcpev.FuncName = "read"
 	} else if tcpev.SysEvent.SysCallId == 1 {
-		tcpev.funcName = "write"
+		tcpev.FuncName = "write"
 	} else if tcpev.SysEvent.SysCallId == 2 {
-		tcpev.funcName = "open"
+		tcpev.FuncName = "open"
 	} else if tcpev.SysEvent.SysCallId == 3 {
-		tcpev.funcName = "read"
+		tcpev.FuncName = "read"
 	} else if tcpev.SysEvent.SysCallId == 15 {
-		tcpev.funcName = "chown"
+		tcpev.FuncName = "chown"
 	} else if tcpev.SysEvent.SysCallId == 21 {
-		tcpev.funcName = "access"
+		tcpev.FuncName = "access"
 	} else if tcpev.SysEvent.SysCallId == 23 {
-		tcpev.funcName = "truncate"
+		tcpev.FuncName = "truncate"
 	} else if tcpev.SysEvent.SysCallId == 62 {
-		tcpev.funcName = "sys_kill"
+		tcpev.FuncName = "sys_kill"
 	} else if tcpev.SysEvent.SysCallId == 34 {
-		tcpev.funcName = "pause"
+		tcpev.FuncName = "pause"
 	} else if tcpev.SysEvent.SysCallId == 128 {
-		tcpev.funcName = "rt_sigtimedwait"
+		tcpev.FuncName = "rt_sigtimedwait"
 	} else if tcpev.SysEvent.SysCallId == 232 {
-		tcpev.funcName = "epoll_wait"
+		tcpev.FuncName = "epoll_wait"
 	} else if tcpev.SysEvent.SysCallId == 270 {
-		tcpev.funcName = "getdents"
+		tcpev.FuncName = "getdents"
 	} else if tcpev.SysEvent.SysCallId == 281 {
-		tcpev.funcName = "futex"
+		tcpev.FuncName = "futex"
 	}
 
 	if int(tcpev.SysEvent.Cookie) > 0 && int(tcpev.SysEvent.Cookie) <= len(userFunctionArray) {
-		tcpev.funcName = userFunctionArray[tcpev.SysEvent.Cookie-1]
+		tcpev.FuncName = userFunctionArray[tcpev.SysEvent.Cookie-1]
 	}
 
 	return false
@@ -312,7 +312,7 @@ func (tcpev *MonitorEvent) String() string {
 
 	if tcpev.Type == 1 {
 		s = fmt.Sprintf("%s Time: %d Pid: %d Tid: %d Comm: [%s] SysID: %d Func:%s Time Latency: %d ns, Max Cpu: %d, Recent CPU: %d, Exit Code: %d, Cookie: %d %s", prefix,
-			tcpev.SysEvent.Timestamp, tcpev.SysEvent.Pid, tcpev.SysEvent.Tid, string(tcpev.SysEvent.Comm[:]), tcpev.SysEvent.SysCallId, tcpev.funcName, tcpev.SysEvent.Latency, tcpev.SysEvent.NrCpusAllowed, tcpev.SysEvent.RecentUsedCpu, tcpev.SysEvent.ExitCode, tcpev.SysEvent.Cookie,
+			tcpev.SysEvent.Timestamp, tcpev.SysEvent.Pid, tcpev.SysEvent.Tid, string(tcpev.SysEvent.Comm[:]), tcpev.SysEvent.SysCallId, tcpev.FuncName, tcpev.SysEvent.Latency, tcpev.SysEvent.NrCpusAllowed, tcpev.SysEvent.RecentUsedCpu, tcpev.SysEvent.ExitCode, tcpev.SysEvent.Cookie,
 			COLORRESET)
 	} else if tcpev.Type == 2 {
 
@@ -380,7 +380,7 @@ func (tcpev *MonitorEvent) GenerateTimeMetric() model.AggregatedTimeMetricValue 
 	if tcpev.Type == 1 {
 		stringMap["node"] = "alex-kamailio"
 		stringMap["comm"] = string(tcpev.SysEvent.Comm[:])
-		stringMap["funcname"] = tcpev.funcName
+		stringMap["funcname"] = tcpev.FuncName
 
 		intMap["timestamp"] = int(tcpev.SysEvent.Timestamp)
 		intMap["pid"] = int(tcpev.SysEvent.Pid)

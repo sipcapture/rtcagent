@@ -425,7 +425,7 @@ func (this *MMonitorProbe) initDecodeFun() error {
 	this.logger.Printf("====> BPF bytecode filename: [%v]\n", found)
 
 	if err != nil {
-		this.logger.Printf("====> ERRROR BPF bytecode filename: [%]\n", err.Error())
+		this.logger.Printf("====> ERRROR BPF bytecode filename: [%v]\n", err.Error())
 		return err
 	}
 	if !found {

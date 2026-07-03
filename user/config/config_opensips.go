@@ -85,21 +85,16 @@ func (this *OpensipsConfig) Check() error {
 	this.Version = OpensipsType3
 	this.VersionInfo = "opensips"
 
-	found := strings.Contains("receive_msg", "COM_DATA")
-	if found {
-		roSection := _elf.Section(".rodata")
-		var buf []byte
-		buf, e = roSection.Data()
-		var ver OpensipsType
-		var verInfo string
-		if e == nil {
-			ver, verInfo = getOpensipsVer(buf)
+	if roSection := _elf.Section(".rodata"); roSection != nil {
+		if buf, e := roSection.Data(); e == nil {
+			if ver, verInfo := getOpensipsVer(buf); ver != OpensipsTypeUnknow {
+				this.Version = ver
+				this.VersionInfo = verInfo
+			}
 		}
-		this.Version = ver
-		this.VersionInfo = verInfo
 	}
 
-	return nil
+	return requireElfSymbols(this.Opensipspath, "receive_msg", "proto_udp_send", "proto_tcp_send")
 }
 
 func getOpensipsVer(buf []byte) (OpensipsType, string) {
