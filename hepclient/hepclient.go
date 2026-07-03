@@ -85,7 +85,7 @@ func (h *HepClient) Send(msg []byte) {
 	h.client.writer.Write(msg)
 	err := h.client.writer.Flush()
 	if err != nil {
-		log.Fatal("%v", err)
+		log.Printf("hep flush error: %v", err)
 		h.client.errCnt++
 		retry := true
 		if retry {
