@@ -36,6 +36,7 @@ const (
 	ModuleNameTcprtt     = "EBPFProbeTcprtt"
 	ModuleNameOpensips   = "EBPFProbeOpensips"
 	ModuleNameMonitor    = "EBPFProbeMonitor"
+	ModuleNameRtpengine  = "EBPFProbeRtpengine"
 )
 
 const (

@@ -67,7 +67,8 @@ func (this *MTcprttProbe) Start() error {
 }
 
 type bpfPrograms struct {
-	TcpClose *ebpf.Program `ebpf:"tcp_close"`
+	TcpClose            *ebpf.Program `ebpf:"tcp_close"`
+	TcpRcvEstablished   *ebpf.Program `ebpf:"tcp_rcv_established"`
 }
 
 type bpfMaps struct {
@@ -110,7 +111,15 @@ func (this *MTcprttProbe) start() error {
 		Program: objs.bpfPrograms.TcpClose,
 	})
 	if err != nil {
-		this.logger.Printf("%s\tBPF bytecode filename FATAL: [%s]\n", this.Name(), bpfFileName)
+		this.logger.Printf("%s\tBPF tcp_close attach failed: %v\n", this.Name(), err)
+		log.Fatal(err)
+	}
+
+	_, err = link.AttachTracing(link.TracingOptions{
+		Program: objs.bpfPrograms.TcpRcvEstablished,
+	})
+	if err != nil {
+		this.logger.Printf("%s\tBPF tcp_rcv_established attach failed: %v\n", this.Name(), err)
 		log.Fatal(err)
 	}
 

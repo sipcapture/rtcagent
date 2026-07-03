@@ -46,7 +46,8 @@ COMMANDS:
 	help		Help about any command
 	freeswitch	capture SIP messages from freeswitch (libsofia): t_port, su_recv
 	kamailio	capture SIP messages from kamailio: recv_msg, udp_send, tcp_send.
-        opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
+	opensips	capture SIP messages from v: recv_msg, udp_send, tcp_send.
+	rtpengine	capture RTP/RTCP media from RTPEngine via recvfrom/sendto syscalls.
 	tcprtt		show tcp rtt stats
   monitor		show advanced monitor statistics
 
