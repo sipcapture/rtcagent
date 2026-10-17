@@ -19,10 +19,32 @@ type HepClient struct {
 	hepQueue  chan []byte
 	addr      string
 	transport string
+	tlsConfig *tls.Config
 	client    HEPConn
 }
 
-func NewHepClient(addr, port, trans string) (*HepClient, error) {
+// Option customises the behaviour of a HepClient.
+type Option func(*HepClient)
+
+// WithTLSConfig sets the TLS configuration used for the "tls" transport.
+// Certificate verification is always performed unless the caller explicitly
+// opts out, so the supplied configuration should normally only be used to
+// provide a custom root CA or an explicit server name.
+func WithTLSConfig(cfg *tls.Config) Option {
+	return func(h *HepClient) {
+		h.tlsConfig = cfg
+	}
+}
+
+// defaultTLSConfig returns a TLS client configuration that verifies the
+// server certificate chain and host name against the system trust store.
+func defaultTLSConfig() *tls.Config {
+	return &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+}
+
+func NewHepClient(addr, port, trans string, opts ...Option) (*HepClient, error) {
 
 	h := &HepClient{
 		addr:      strings.ToLower(cutSpace(addr + ":" + port)),
@@ -31,9 +53,12 @@ func NewHepClient(addr, port, trans string) (*HepClient, error) {
 		hepQueue:  make(chan []byte, 20000),
 	}
 
+	for _, opt := range opts {
+		opt(h)
+	}
+
 	if err := h.ConnectServer(); err != nil {
-		log.Fatalf("Error: %s", err.Error())
-		return nil, fmt.Errorf("cannot establish a connection")
+		return nil, fmt.Errorf("cannot establish a connection: %w", err)
 	}
 
 	go h.Start()
@@ -55,26 +80,36 @@ func (h *HepClient) ReConnect() (err error) {
 }
 
 func (h *HepClient) ConnectServer() (err error) {
+	var conn net.Conn
+
 	if h.transport == "udp" {
 
-		if h.client.conn, err = net.Dial("udp", h.addr); err != nil {
+		if conn, err = net.Dial("udp", h.addr); err != nil {
 			return fmt.Errorf("dial transport failed: %s", err.Error())
 		}
 	} else if h.transport == "tcp" {
 
-		if h.client.conn, err = net.Dial("tcp", h.addr); err != nil {
+		if conn, err = net.Dial("tcp", h.addr); err != nil {
 			return fmt.Errorf("dial transport failed: %s", err.Error())
 		}
 	} else if h.transport == "tls" {
-		if h.client.conn, err = tls.Dial("tcp", h.addr, &tls.Config{InsecureSkipVerify: true}); err != nil {
+		tlsConfig := h.tlsConfig
+		if tlsConfig == nil {
+			tlsConfig = defaultTLSConfig()
+		}
+		if conn, err = tls.Dial("tcp", h.addr, tlsConfig); err != nil {
 			return fmt.Errorf("dial transport failed: %s", err.Error())
 		}
 	} else {
 		return fmt.Errorf("unsupported transport: %s", h.transport)
 	}
 
+	// Only expose the connection once the dial has succeeded. Assigning the
+	// result of tls.Dial directly would otherwise store a typed-nil *tls.Conn
+	// inside the net.Conn interface even when the handshake fails.
+	h.client.conn = conn
 	h.client.writer = bufio.NewWriterSize(h.client.conn, 8192)
-	return err
+	return nil
 }
 
 func (h *HepClient) Output(msg []byte) {

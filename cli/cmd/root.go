@@ -95,5 +95,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&globalFlags.HepServer, "hep-server", "S", "", "hep server to duplicate: i.e. 10.0.0.1")
 	rootCmd.PersistentFlags().StringVarP(&globalFlags.HepPort, "hep-port", "P", "9060", "hep port - default 9060")
 	rootCmd.PersistentFlags().StringVarP(&globalFlags.HepTransport, "hep-transport", "T", "udp", "hep transport default udp. Can be udp, tcp, tls")
+	rootCmd.PersistentFlags().StringVar(&globalFlags.HepTLSCA, "hep-tls-ca", "", "path to a PEM CA bundle used to verify the HEP server certificate for the tls transport (default system trust store)")
+	rootCmd.PersistentFlags().StringVar(&globalFlags.HepTLSServerName, "hep-tls-server-name", "", "server name used to verify the HEP server certificate for the tls transport (default host from -S)")
 
 }

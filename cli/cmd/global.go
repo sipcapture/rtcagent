@@ -25,16 +25,18 @@ import (
 // GlobalFlags are flags that defined globally
 // and are inherited to all sub-commands.
 type GlobalFlags struct {
-	IsHex        bool
-	Debug        bool
-	Pid          uint64 // PID
-	Uid          uint64 // UID
-	NoSearch     bool   // No lib search
-	loggerFile   string // save file
-	HepServer    string
-	HepPort      string
-	HepTransport string
-	HepEnable    bool
+	IsHex            bool
+	Debug            bool
+	Pid              uint64 // PID
+	Uid              uint64 // UID
+	NoSearch         bool   // No lib search
+	loggerFile       string // save file
+	HepServer        string
+	HepPort          string
+	HepTransport     string
+	HepTLSCA         string
+	HepTLSServerName string
+	HepEnable        bool
 }
 
 func getGlobalConf(command *cobra.Command) (conf GlobalFlags, err error) {
@@ -79,6 +81,16 @@ func getGlobalConf(command *cobra.Command) (conf GlobalFlags, err error) {
 	}
 
 	conf.HepTransport, err = command.Flags().GetString("hep-transport")
+	if err != nil {
+		return
+	}
+
+	conf.HepTLSCA, err = command.Flags().GetString("hep-tls-ca")
+	if err != nil {
+		return
+	}
+
+	conf.HepTLSServerName, err = command.Flags().GetString("hep-tls-server-name")
 	if err != nil {
 		return
 	}
