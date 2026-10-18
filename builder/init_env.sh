@@ -55,9 +55,15 @@ cd ~
 uname -a
 sudo apt-get update
 
+# Cross toolchain for the linux/arm64 build (amd64 hosts only)
+CROSS_PKG=""
+if [ "${ARCH}" = "amd64" ]; then
+  CROSS_PKG="gcc-aarch64-linux-gnu"
+fi
+
 # install packages
 sudo apt-get install --yes build-essential pkgconf libelf-dev llvm-${CLANG_NUM} clang-${CLANG_NUM} \
-  linux-tools-common linux-tools-generic upx-ucl
+  linux-tools-common linux-tools-generic upx-ucl ${CROSS_PKG}
 KVER="$(uname -r)"
 sudo apt-get install -y "linux-tools-${KVER}" 2>/dev/null || \
   sudo apt-get install -y linux-tools-azure linux-cloud-tools-azure 2>/dev/null || true

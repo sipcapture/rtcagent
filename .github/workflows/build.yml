@@ -9,6 +9,7 @@ permissions:
   contents: write
   packages: write
   id-token: write
+  attestations: write
 
 env:
   REGISTRY: ghcr.io
@@ -30,13 +31,19 @@ jobs:
       run: make
       env:
         SKIP_AUTOGEN: 1     
+    - name: Build RTCAgent (arm64)
+      run: make build_arm64
+      env:
+        SKIP_AUTOGEN: 1
     - name: Compress
       run: |
         strip bin/rtcagent
         upx bin/rtcagent 
+    - name: Compress (arm64)
+      run: aarch64-linux-gnu-strip bin/rtcagent-arm64
     - name: Check & Run
       run: |
-        ls -alFh bin/rtcagent
+        ls -alFh bin/
         ./bin/rtcagent --help
         
     - name: Patch NFPM Version
@@ -62,29 +69,63 @@ jobs:
           packager: rpm
           config: rtcagent_workflow.yaml
           target: rtcagent_${{ env.VERSION }}.amd64.rpm
+    - name: Create deb package (arm64)
+      uses: burningalchemist/nfpm-action@v1
+      env:
+          VERSION: ${{ env.VERSION }}
+      with:
+          packager: deb
+          config: rtcagent_workflow_arm64.yaml
+          target: rtcagent_${{ env.VERSION }}_arm64.deb
+    - name: Create rpm package (arm64)
+      uses: burningalchemist/nfpm-action@v1
+      env:
+          VERSION: ${{ env.VERSION }}
+      with:
+          packager: rpm
+          config: rtcagent_workflow_arm64.yaml
+          target: rtcagent_${{ env.VERSION }}.arm64.rpm
 
     - name: Generate checksums
       run: |
-        ( cd bin && sha256sum rtcagent ) > checksums.txt
-        sha256sum "rtcagent_${VERSION}_amd64.deb" >> checksums.txt
-        sha256sum "rtcagent_${VERSION}.amd64.rpm" >> checksums.txt
+        ( cd bin && sha256sum rtcagent rtcagent-arm64 ) > checksums.txt
+        sha256sum "rtcagent_${VERSION}_amd64.deb" "rtcagent_${VERSION}.amd64.rpm" >> checksums.txt
+        sha256sum "rtcagent_${VERSION}_arm64.deb" "rtcagent_${VERSION}.arm64.rpm" >> checksums.txt
         cat checksums.txt
 
     - name: Install cosign
       uses: sigstore/cosign-installer@v3
 
-    - name: Sign the binary (keyless)
+    - name: Sign the binaries (keyless)
       run: |
         cosign sign-blob --yes \
           --output-signature rtcagent.sig \
           --output-certificate rtcagent.pem \
           bin/rtcagent
+        cosign sign-blob --yes \
+          --output-signature rtcagent-arm64.sig \
+          --output-certificate rtcagent-arm64.pem \
+          bin/rtcagent-arm64
 
     - name: Install syft
       uses: anchore/sbom-action/download-syft@v0
 
     - name: Generate SBOM
-      run: syft bin/rtcagent -o spdx-json=rtcagent.spdx.json
+      run: |
+        syft bin/rtcagent -o spdx-json=rtcagent.spdx.json
+        syft bin/rtcagent-arm64 -o spdx-json=rtcagent-arm64.spdx.json
+
+    - name: Attest build provenance
+      if: github.event_name != 'pull_request'
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: |
+          bin/rtcagent
+          bin/rtcagent-arm64
+          rtcagent_${{ env.VERSION }}_amd64.deb
+          rtcagent_${{ env.VERSION }}.amd64.rpm
+          rtcagent_${{ env.VERSION }}_arm64.deb
+          rtcagent_${{ env.VERSION }}.arm64.rpm
 
     - name: Upload Release
       if: github.event_name != 'pull_request'
@@ -94,18 +135,30 @@ jobs:
       with:
           release_config: |
               ./bin/rtcagent
+              ./bin/rtcagent-arm64
               ./rtcagent_${{ env.VERSION }}_amd64.deb
               ./rtcagent_${{ env.VERSION }}.amd64.rpm
+              ./rtcagent_${{ env.VERSION }}_arm64.deb
+              ./rtcagent_${{ env.VERSION }}.arm64.rpm
               ./checksums.txt
               ./rtcagent.sig
               ./rtcagent.pem
+              ./rtcagent-arm64.sig
+              ./rtcagent-arm64.pem
               ./rtcagent.spdx.json
+              ./rtcagent-arm64.spdx.json
           tag_name: ${{ github.ref_name }}
           release_name: rtcagent_${{ github.ref_name }}
           draft: false
           prerelease: false
           overwrite: true    
           
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Log in to the Container registry
       uses: docker/login-action@v4.6.0
       with:
@@ -118,6 +171,7 @@ jobs:
       uses: docker/build-push-action@v7.4.0
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: |
            ghcr.io/sipcapture/rtcagent:latest
