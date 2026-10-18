@@ -1,0 +1,8 @@
+# The image only downloads the released binary, so keep the build context small.
+.git
+.github
+bin/
+*.deb
+*.rpm
+*.test
+dump.pcap
