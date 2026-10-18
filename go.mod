@@ -1,6 +1,6 @@
 module rtcagent
 
-go 1.26.0
+go 1.26.9
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.13.3
@@ -36,7 +36,7 @@ require (
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/vishvananda/netlink v1.3.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
-	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )

@@ -97,7 +97,7 @@ func startTLSServer(t *testing.T, cert tls.Certificate) string {
 				return
 			}
 			go func(c net.Conn) {
-				defer c.Close()
+				defer func() { _ = c.Close() }()
 				if tc, ok := c.(*tls.Conn); ok {
 					_ = tc.Handshake()
 				}
@@ -174,7 +174,7 @@ func TestNewHepClientTLSWithCustomCA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHepClient: %v", err)
 	}
-	h.Close()
+	_ = h.Close()
 }
 
 func TestNewHepClientTLSRejectsUntrustedCertificate(t *testing.T) {
@@ -255,7 +255,7 @@ func TestSendDeliversMessage(t *testing.T) {
 		if err != nil {
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		buf := make([]byte, 64)
 		n, _ := conn.Read(buf)
@@ -271,7 +271,7 @@ func TestSendDeliversMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHepClient: %v", err)
 	}
-	defer h.Close()
+	defer func() { _ = h.Close() }()
 
 	if err := h.Send([]byte("HEP3test")); err != nil {
 		t.Fatalf("Send: %v", err)

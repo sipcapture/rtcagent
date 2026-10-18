@@ -84,7 +84,11 @@ func (this *MMonitorProbe) Start() error {
 	}
 
 	//UI channel
-	go this.MakeUI()
+	go func() {
+		if err := this.MakeUI(); err != nil {
+			this.logger.Printf("MakeUI failed: %v", err)
+		}
+	}()
 
 	return nil
 }

@@ -31,7 +31,7 @@ func requireElfSymbols(path string, names ...string) error {
 	if err != nil {
 		return err
 	}
-	defer elfFile.Close()
+	defer func() { _ = elfFile.Close() }()
 
 	var missing []string
 	for _, name := range names {

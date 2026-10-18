@@ -96,7 +96,7 @@ func (this *Module) Init(ctx context.Context, logger *log.Logger, conf config.IC
 	this.isKernelLess5_2 = false //set false default
 	kv, err := kernel.HostVersion()
 	if err != nil {
-		// nothing to do.
+		this.logger.Printf("could not detect kernel version, assuming >= 5.2: %v", err)
 	}
 	if kv < kernel.VersionCode(5, 2, 0) {
 		this.isKernelLess5_2 = true
