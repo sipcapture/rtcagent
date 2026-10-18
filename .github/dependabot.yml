@@ -10,6 +10,12 @@ updates:
       go-modules:
         patterns:
           - "*"
+    ignore:
+      # github.com/adubovikov/ebpfmanager v0.4.7 (the newest release) does not
+      # compile against cilium/ebpf v0.13.0+ (spec.Freeze, RewriteConstants and
+      # RewriteMaps were removed), so updating it breaks `go build ./...`.
+      # Re-enable once ebpfmanager supports a newer cilium/ebpf.
+      - dependency-name: "github.com/cilium/ebpf"
 
   # Keep GitHub Actions pinned up to date.
   - package-ecosystem: github-actions
