@@ -8,8 +8,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"math/big"
 	"net"
+	"rtcagent/pkg/metrics"
+	"strings"
 	"testing"
 	"time"
 )
@@ -284,5 +287,176 @@ func TestSendDeliversMessage(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for the HEP message")
+	}
+}
+
+// TestSendReconnectsAfterFailedWrite forces the current connection to break and
+// verifies that Send reconnects and delivers the message, updating the metrics.
+func TestSendReconnectsAfterFailedWrite(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+
+	received := make(chan []byte, 1)
+	go func() {
+		// First connection: will be closed client-side so the write fails.
+		c1, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = c1.Close() }()
+
+		// Second connection: the client reconnects here.
+		c2, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = c2.Close() }()
+
+		buf := make([]byte, 64)
+		n, _ := c2.Read(buf)
+		received <- buf[:n]
+	}()
+
+	host, port, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		t.Fatalf("split addr: %v", err)
+	}
+
+	h, err := NewHepClient(host, port, "tcp",
+		WithRetryPolicy(3, time.Millisecond, 2*time.Millisecond))
+	if err != nil {
+		t.Fatalf("NewHepClient: %v", err)
+	}
+	t.Cleanup(func() { _ = h.Close() })
+
+	reconnectsBefore := testutil.ToFloat64(metrics.HEPReconnects)
+
+	// Break the live connection so the next write fails.
+	h.mu.Lock()
+	err = h.client.conn.Close()
+	h.mu.Unlock()
+	if err != nil {
+		t.Fatalf("close connection: %v", err)
+	}
+
+	if err := h.Send([]byte("HEP3retry")); err != nil {
+		t.Fatalf("Send should recover after reconnecting: %v", err)
+	}
+
+	select {
+	case got := <-received:
+		if string(got) != "HEP3retry" {
+			t.Fatalf("unexpected payload after reconnect: %q", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for the reconnected HEP message")
+	}
+
+	if got := testutil.ToFloat64(metrics.HEPReconnects); got <= reconnectsBefore {
+		t.Fatalf("HEPReconnects should increase: before=%v after=%v", reconnectsBefore, got)
+	}
+	if h.client.errCnt != 0 {
+		t.Fatalf("error counter should be reset after a successful send, got %d", h.client.errCnt)
+	}
+}
+
+// TestSendExhaustsRetries verifies the error returned once every reconnect
+// attempt has failed, and that the send-error metric is updated.
+func TestSendExhaustsRetries(t *testing.T) {
+	h := &HepClient{
+		addr:       "127.0.0.1:1", // no listener: dial and write both fail
+		transport:  "tcp",
+		maxRetries: 2,
+		backoff:    time.Millisecond,
+		maxBackoff: 2 * time.Millisecond,
+	}
+
+	sendErrorsBefore := testutil.ToFloat64(metrics.HEPSendErrors)
+
+	err := h.Send([]byte("HEP3"))
+	if err == nil {
+		t.Fatal("expected Send to fail when no server is reachable")
+	}
+	if !strings.Contains(err.Error(), "reconnect attempts") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if h.client.errCnt != 1 {
+		t.Fatalf("error counter should be 1 after exhausting retries, got %d", h.client.errCnt)
+	}
+	if got := testutil.ToFloat64(metrics.HEPSendErrors); got <= sendErrorsBefore {
+		t.Fatalf("HEPSendErrors should increase: before=%v after=%v", sendErrorsBefore, got)
+	}
+}
+
+// TestSendDisabledRetriesReturnsCause checks that a non-positive retry budget
+// makes Send fail immediately with the original cause.
+func TestSendDisabledRetriesReturnsCause(t *testing.T) {
+	h := &HepClient{addr: "127.0.0.1:1", transport: "tcp", maxRetries: 0}
+
+	if err := h.Send([]byte("HEP3")); err == nil {
+		t.Fatal("expected Send to fail without a connection")
+	}
+	if h.client.errCnt != 1 {
+		t.Fatalf("error counter should be 1, got %d", h.client.errCnt)
+	}
+}
+
+// TestOutputQueuesMessage verifies Output enqueues and reports the queue length.
+func TestOutputQueuesMessage(t *testing.T) {
+	h := &HepClient{hepQueue: make(chan []byte, 4)}
+	h.Output([]byte("HEP3queued"))
+
+	if got := len(h.hepQueue); got != 1 {
+		t.Fatalf("expected one queued message, got %d", got)
+	}
+	if got := testutil.ToFloat64(metrics.HEPQueueLength); got != 1 {
+		t.Fatalf("HEPQueueLength: got %v, want 1", got)
+	}
+}
+
+// TestSendResetsErrorCount verifies a successful send clears the error counter.
+func TestSendResetsErrorCount(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		buf := make([]byte, 64)
+		_, _ = conn.Read(buf)
+	}()
+
+	host, port, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		t.Fatalf("split addr: %v", err)
+	}
+
+	h, err := NewHepClient(host, port, "tcp")
+	if err != nil {
+		t.Fatalf("NewHepClient: %v", err)
+	}
+	t.Cleanup(func() { _ = h.Close() })
+
+	h.client.errCnt = 7
+	if err := h.Send([]byte("HEP3")); err != nil {
+		t.Fatalf("Send: %v", err)
+	}
+	if h.client.errCnt != 0 {
+		t.Fatalf("error counter should be reset, got %d", h.client.errCnt)
+	}
+}
+
+func TestCutSpace(t *testing.T) {
+	if got := cutSpace(" 127.0.0.1 : 9060 "); got != "127.0.0.1:9060" {
+		t.Fatalf("cutSpace: got %q", got)
 	}
 }
