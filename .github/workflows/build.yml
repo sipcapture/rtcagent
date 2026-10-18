@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 env:
   REGISTRY: ghcr.io
@@ -61,7 +62,30 @@ jobs:
           packager: rpm
           config: rtcagent_workflow.yaml
           target: rtcagent_${{ env.VERSION }}.amd64.rpm
-          
+
+    - name: Generate checksums
+      run: |
+        ( cd bin && sha256sum rtcagent ) > checksums.txt
+        sha256sum "rtcagent_${VERSION}_amd64.deb" >> checksums.txt
+        sha256sum "rtcagent_${VERSION}.amd64.rpm" >> checksums.txt
+        cat checksums.txt
+
+    - name: Install cosign
+      uses: sigstore/cosign-installer@v3
+
+    - name: Sign the binary (keyless)
+      run: |
+        cosign sign-blob --yes \
+          --output-signature rtcagent.sig \
+          --output-certificate rtcagent.pem \
+          bin/rtcagent
+
+    - name: Install syft
+      uses: anchore/sbom-action/download-syft@v0
+
+    - name: Generate SBOM
+      run: syft bin/rtcagent -o spdx-json=rtcagent.spdx.json
+
     - name: Upload Release
       if: github.event_name != 'pull_request'
       uses: boxpositron/upload-multiple-releases@1.0.7
@@ -72,6 +96,10 @@ jobs:
               ./bin/rtcagent
               ./rtcagent_${{ env.VERSION }}_amd64.deb
               ./rtcagent_${{ env.VERSION }}.amd64.rpm
+              ./checksums.txt
+              ./rtcagent.sig
+              ./rtcagent.pem
+              ./rtcagent.spdx.json
           tag_name: ${{ github.ref_name }}
           release_name: rtcagent_${{ github.ref_name }}
           draft: false
@@ -86,6 +114,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Docker Build and push
+      id: docker
       uses: docker/build-push-action@v7.4.0
       with:
         context: .
@@ -93,3 +122,6 @@ jobs:
         tags: |
            ghcr.io/sipcapture/rtcagent:latest
            ghcr.io/sipcapture/rtcagent:${{ github.ref_name }}
+
+    - name: Sign the container image (keyless)
+      run: cosign sign --yes ghcr.io/sipcapture/rtcagent@${{ steps.docker.outputs.digest }}
