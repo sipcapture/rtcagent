@@ -59,7 +59,7 @@ func tcprttCommandFunc(command *cobra.Command, args []string) {
 
 	mod := module.GetModuleByName(module.ModuleNameTcprtt)
 
-	logger := log.New(os.Stdout, "tcprtt_", log.LstdFlags)
+	logger := newLogger("tcprtt", command)
 	logger.Printf("RTCAGENT :: version :%s", GitVersion)
 	logger.Printf("RTCAGENT :: start to run %s module", mod.Name())
 
