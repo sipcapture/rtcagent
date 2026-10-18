@@ -4,13 +4,18 @@
 # RTCAGENT_SHA256 build arg lets CI/users verify the downloaded artifact.
 FROM alpine:3.20 AS builder
 
+# TARGETARCH is provided automatically by buildx (amd64/arm64).
+ARG TARGETARCH=amd64
 ARG RTCAGENT_VERSION=latest
+# Optional sha256 of the downloaded binary (single-arch builds only).
 ARG RTCAGENT_SHA256=""
 
 RUN apk add --no-cache curl ca-certificates
 
 WORKDIR /out
-RUN curl -fsSL "https://github.com/sipcapture/rtcagent/releases/${RTCAGENT_VERSION}/download/rtcagent" -o rtcagent \
+RUN ASSET="rtcagent"; \
+    if [ "${TARGETARCH}" = "arm64" ]; then ASSET="rtcagent-arm64"; fi; \
+    curl -fsSL "https://github.com/sipcapture/rtcagent/releases/${RTCAGENT_VERSION}/download/${ASSET}" -o rtcagent \
     && if [ -n "${RTCAGENT_SHA256}" ]; then echo "${RTCAGENT_SHA256}  rtcagent" | sha256sum -c -; fi \
     && chmod +x rtcagent
 

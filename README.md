@@ -27,12 +27,21 @@ from the core of supported applications bypassing manual code integrations, netw
 
 
 ### Download
-Download an `amd64/x86` static build of `rtcagent` and use it immediately on modern kernels.
+Download a static build of `rtcagent` and use it immediately on modern kernels.
+
+`amd64/x86`:
 ```bash
 curl -fsSL github.com/sipcapture/rtcagent/releases/latest/download/rtcagent -O && chmod +x rtcagent
 ```
 
-Prefer using packages? Get the latest [deb and rpm](https://github.com/sipcapture/rtcagent/releases) releases for `amd64/x86`
+`arm64/aarch64`:
+```bash
+curl -fsSL github.com/sipcapture/rtcagent/releases/latest/download/rtcagent-arm64 -O && chmod +x rtcagent-arm64
+```
+
+Prefer using packages? Get the latest [deb and rpm](https://github.com/sipcapture/rtcagent/releases) releases for `amd64/x86` and `arm64/aarch64`.
+
+Each release also ships `checksums.txt`, keyless cosign signatures (`*.sig`/`*.pem`) and an SPDX SBOM, and the build has GitHub [artifact attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations) (`gh attestation verify <file> -R sipcapture/rtcagent`).
 
 ### Usage
 

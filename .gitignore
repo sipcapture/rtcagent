@@ -16,3 +16,7 @@ coverage.out
 *~
 # Compiled test main package (created by go test in pkg/proc/go_elf)
 /pkg/proc/go_elf/go_elf
+
+# Makefile tool-check sentinels
+.check_*
+.checkver_*

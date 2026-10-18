@@ -376,6 +376,14 @@ build: \
 	assets
 	CGO_ENABLED=1 $(CMD_GO) build -tags $(TARGET_TAG) -ldflags "-extldflags '-static' -w -s -X 'rtcagent/cli/cmd.GitVersion=$(TARGET_TAG)_$(UNAME_M):$(VERSION):[CORE]'" -tags netgo -installsuffix netgo -o bin/rtcagent .
 
+# Cross-compile a static linux/arm64 binary on an amd64 host. Requires the
+# aarch64-linux-gnu cross toolchain (gcc-aarch64-linux-gnu).
+.PHONY: build_arm64
+build_arm64: \
+	.checkver_$(CMD_GO) \
+	assets
+	CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 $(CMD_GO) build -tags $(TARGET_TAG) -ldflags "-extldflags '-static' -w -s -X 'rtcagent/cli/cmd.GitVersion=$(TARGET_TAG)_aarch64:$(VERSION):[CORE]'" -tags netgo -installsuffix netgo -o bin/rtcagent-arm64 .
+
 
 # FOR NON-CORE
 .PHONY: build_nocore
