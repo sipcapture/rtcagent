@@ -34,10 +34,10 @@ import (
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 
-	manager "github.com/adubovikov/ebpfmanager"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
+	manager "github.com/gojue/ebpfmanager"
 	"golang.org/x/sys/unix"
 )
 
@@ -178,7 +178,7 @@ func (this *MTcprttProbe) setupManagers() error {
 
 		VerifierOptions: ebpf.CollectionOptions{
 			Programs: ebpf.ProgramOptions{
-				LogSize: 2097152,
+				LogSizeStart: 2097152,
 			},
 		},
 
