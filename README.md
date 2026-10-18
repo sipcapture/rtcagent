@@ -41,7 +41,7 @@ curl -fsSL github.com/sipcapture/rtcagent/releases/latest/download/rtcagent-arm6
 
 Prefer using packages? Get the latest [deb and rpm](https://github.com/sipcapture/rtcagent/releases) releases for `amd64/x86` and `arm64/aarch64`.
 
-Each release also ships `checksums.txt`, keyless cosign signatures (`*.sig`/`*.pem`) and an SPDX SBOM, and the build has GitHub [artifact attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations) (`gh attestation verify <file> -R sipcapture/rtcagent`).
+Each release also ships `checksums.txt`, keyless cosign signatures (`*.sig`/`*.pem`) and an SPDX SBOM, and the build has GitHub [artifact attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations) (`gh attestation verify <file> -R sipcapture/rtcagent`). The container image is signed and accompanied by an SBOM and a Trivy scan report (`rtcagent-image.spdx.json`, `trivy-image.sarif`), with the SBOM attached to the image as a cosign attestation.
 
 ### Usage
 
