@@ -109,7 +109,5 @@ func opensipsCommandFunc(command *cobra.Command, args []string) {
 			logger.Fatalf("%v", err)
 		}
 	}(mod)
-	<-stopper
-	cancelFun()
-	os.Exit(0)
+	waitForShutdown(stopper, logger, cancelFun, mod)
 }
