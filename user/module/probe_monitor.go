@@ -58,9 +58,13 @@ type MMonitorProbe struct {
 	eventMaps         []*ebpf.Map
 	linkData          link.Link
 	userFunctionArray []string
-	promCh            chan model.AggregatedMetricValue
-	uiCh              chan model.AggregatedTimeMetricValue
-	uiSorted          []model.AggregatedTimeMetricValue
+	// usercall probes are attached directly (not through the manager) so that a
+	// per-function attach cookie can be set; see startUserCall.
+	userLinks  []link.Link
+	collection *ebpf.Collection
+	promCh     chan model.AggregatedMetricValue
+	uiCh       chan model.AggregatedTimeMetricValue
+	uiSorted   []model.AggregatedTimeMetricValue
 }
 
 func (this *MMonitorProbe) Init(ctx context.Context, logger *log.Logger, conf config.IConfig) error {
@@ -165,7 +169,7 @@ func (this *MMonitorProbe) start() error {
 
 	// Allow the current process to lock memory for eBPF resources.
 	if err := rlimit.RemoveMemlock(); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("couldn't remove memory lock: %w", err)
 	}
 
 	var bpfFileName = this.geteBPFName("user/bytecode/monitor_kern.o")
@@ -177,6 +181,7 @@ func (this *MMonitorProbe) start() error {
 	}
 
 	networkLatency := this.conf.(*config.MonitorConfig).NetworkLatency
+	usercall := this.conf.(*config.MonitorConfig).UserCall
 
 	if networkLatency {
 		objs := monitorBpfObjects{}
@@ -196,12 +201,19 @@ func (this *MMonitorProbe) start() error {
 			Program: objs.monitorBpfPrograms.MonitorClose,
 		})
 		if err != nil {
-			this.logger.Printf("%s\tBPF bytecode filename FATAL: [%s]\n", this.Name(), bpfFileName)
-			log.Fatal(err)
+			return fmt.Errorf("couldn't attach monitor tracing program %s: %w", bpfFileName, err)
 		}
 
 		this.eventMaps = append(this.eventMaps, objs.monitorBpfMaps.Events)
 		this.eventFuncMaps[objs.monitorBpfMaps.Events] = &event.MonitorEvent{}
+
+	} else if usercall {
+
+		// The usercall probes need a per-function attach cookie, which the
+		// eBPF manager does not expose, so they are attached directly.
+		if err = this.startUserCall(byteBuf); err != nil {
+			return err
+		}
 
 	} else {
 
@@ -220,22 +232,133 @@ func (this *MMonitorProbe) start() error {
 		if err = this.bpfManager.Start(); err != nil {
 			return fmt.Errorf("couldn't start bootstrap manager %v", err)
 		}
+
+		if err = this.initDecodeFun(); err != nil {
+			return err
+		}
 	}
 
-	err = this.initDecodeFun()
-	if err != nil {
-		return err
+	return nil
+}
+
+// startUserCall loads the monitor program directly and attaches the
+// user_function/user_ret_function uprobes to every configured function with a
+// unique attach cookie, which the eBPF programs read through
+// bpf_get_attach_cookie() to report the function name.
+func (this *MMonitorProbe) startUserCall(byteBuf []byte) error {
+	conf := this.conf.(*config.MonitorConfig)
+
+	binaryPath := "/usr/sbin/kamailio"
+	if conf.ElfType == config.ElfTypeBin {
+		binaryPath = conf.Monitorpath
 	}
+
+	if !conf.GetNoSearch() {
+		if _, err := os.Stat(binaryPath); err != nil {
+			return err
+		}
+	}
+
+	if conf.ShowUserFunction {
+		cmd := exec.Command("/usr/bin/readelf", "-Ws", binaryPath)
+		stdout, err := cmd.Output()
+		if err != nil {
+			return err
+		}
+
+		for _, val := range strings.Split(strings.ReplaceAll(string(stdout), "\r\n", "\n"), "\n") {
+			if strings.Contains(val, "FUNC") && !strings.Contains(val, "GLIBC") {
+				fmt.Printf("%s %s %s\r\n", event.COLORCYAN, val, event.COLORRESET)
+			}
+		}
+		os.Exit(0)
+	}
+
+	this.promCh = conf.PromCh
+	this.uiCh = conf.UiCh
+
+	userFunctions := conf.UserFunctions
+	if len(userFunctions) == 0 {
+		userFunctions = append(userFunctions, "receive_msg")
+	}
+	this.userFunctionArray = append(this.userFunctionArray, userFunctions...)
+
+	this.logger.Printf("%s\tMonitor: %d, Version:%s, binrayPath:%s\n", this.Name(), conf.Version, conf.VersionInfo, binaryPath)
+
+	spec, err := ebpf.LoadCollectionSpecFromReader(bytes.NewReader(byteBuf))
+	if err != nil {
+		return fmt.Errorf("can't load monitor bpf spec: %w", err)
+	}
+
+	coll, err := ebpf.NewCollection(spec)
+	if err != nil {
+		return fmt.Errorf("can't load monitor bpf collection: %w", err)
+	}
+	this.collection = coll
+
+	enter := coll.Programs["user_function"]
+	ret := coll.Programs["user_ret_function"]
+	if enter == nil || ret == nil {
+		return errors.New("monitor: user_function/user_ret_function programs not found")
+	}
+
+	ex, err := link.OpenExecutable(binaryPath)
+	if err != nil {
+		return fmt.Errorf("monitor: open %s: %w", binaryPath, err)
+	}
+
+	for i, fn := range this.userFunctionArray {
+		cookie := uint64(i + 1)
+
+		l, err := ex.Uprobe(fn, enter, &link.UprobeOptions{Cookie: cookie})
+		if err != nil {
+			return fmt.Errorf("monitor: attach uprobe %s: %w", fn, err)
+		}
+		this.userLinks = append(this.userLinks, l)
+
+		rl, err := ex.Uretprobe(fn, ret, &link.UprobeOptions{Cookie: cookie})
+		if err != nil {
+			return fmt.Errorf("monitor: attach uretprobe %s: %w", fn, err)
+		}
+		this.userLinks = append(this.userLinks, rl)
+	}
+
+	events := coll.Maps["events"]
+	if events == nil {
+		return errors.New("monitor: events map not found")
+	}
+	this.eventMaps = append(this.eventMaps, events)
+	this.eventFuncMaps[events] = &event.MonitorEvent{}
 
 	return nil
 }
 
 func (this *MMonitorProbe) Close() error {
 
-	this.linkData.Close()
-	if err := this.bpfManager.Stop(manager.CleanAll); err != nil {
-		return fmt.Errorf("couldn't stop manager %v", err)
+	for _, l := range this.userLinks {
+		if err := l.Close(); err != nil {
+			this.logger.Printf("%s\tfailed to close usercall probe: %v", this.Name(), err)
+		}
 	}
+	this.userLinks = nil
+
+	if this.linkData != nil {
+		if err := this.linkData.Close(); err != nil {
+			this.logger.Printf("%s\tfailed to close link: %v", this.Name(), err)
+		}
+	}
+
+	if this.collection != nil {
+		this.collection.Close()
+		this.collection = nil
+	}
+
+	if this.bpfManager != nil {
+		if err := this.bpfManager.Stop(manager.CleanAll); err != nil {
+			return fmt.Errorf("couldn't stop manager %v", err)
+		}
+	}
+
 	return this.Module.Close()
 }
 
@@ -245,9 +368,7 @@ func (this *MMonitorProbe) setupManagers() error {
 	version := this.conf.(*config.MonitorConfig).Version
 	versionInfo := this.conf.(*config.MonitorConfig).VersionInfo
 	syscall := this.conf.(*config.MonitorConfig).SysCall
-	usercall := this.conf.(*config.MonitorConfig).UserCall
 	networkcall := this.conf.(*config.MonitorConfig).NetworkCall
-	userFunction := this.conf.(*config.MonitorConfig).UserFunctions
 	this.promCh = this.conf.(*config.MonitorConfig).PromCh
 	this.uiCh = this.conf.(*config.MonitorConfig).UiCh
 	showUserFunction := this.conf.(*config.MonitorConfig).ShowUserFunction
@@ -305,34 +426,6 @@ func (this *MMonitorProbe) setupManagers() error {
 			EbpfFuncName: "raw_tracepoint_sys_exit",
 		})
 
-	} else if usercall {
-
-		if len(userFunction) == 0 {
-			userFunction = append(userFunction, "receive_msg")
-		}
-
-		this.userFunctionArray = append(this.userFunctionArray, userFunction...)
-
-		// TODO(rtcagent): gojue/ebpfmanager does not expose uprobe attach
-		// cookies, so the per-function cookie consumed by bpf_get_attach_cookie
-		// in monitor_kern.c can no longer be set and the function name is not
-		// reported for usercall events. Restore it by attaching these uprobes
-		// directly with cilium/ebpf/link (link.UprobeOptions.Cookie) or by using
-		// a manager fork that restores Probe.Cookie.
-		for _, userFunction := range this.userFunctionArray {
-			probes = append(probes, &manager.Probe{
-				Section:          "uprobe/user_function",
-				EbpfFuncName:     "user_function",
-				AttachToFuncName: userFunction,
-				BinaryPath:       binaryPath,
-			})
-			probes = append(probes, &manager.Probe{
-				Section:          "uretprobe/user_function",
-				EbpfFuncName:     "user_ret_function",
-				AttachToFuncName: userFunction,
-				BinaryPath:       binaryPath,
-			})
-		}
 	} else if networkcall {
 
 		probes = append(probes, &manager.Probe{
@@ -364,7 +457,7 @@ func (this *MMonitorProbe) setupManagers() error {
 		eventMap = "netevents"
 
 	} else {
-		fmt.Println("No syscall or usercall")
+		fmt.Println("No syscall, networkcall or usercall mode selected")
 		return nil
 	}
 	/*
