@@ -20,3 +20,6 @@ coverage.out
 # Makefile tool-check sentinels
 .check_*
 .checkver_*
+
+# GoReleaser output
+/dist/

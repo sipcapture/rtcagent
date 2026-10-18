@@ -1,0 +1,111 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: rtcagent
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: rtcagent
+    main: .
+    binary: 'rtcagent{{ if ne .Arch "amd64" }}-{{ .Arch }}{{ end }}'
+    env:
+      - CGO_ENABLED=1
+    tags:
+      - linux
+      - netgo
+    flags:
+      - -installsuffix=netgo
+    ldflags:
+      - -extldflags '-static'
+      - -s
+      - -w
+      - -X rtcagent/cli/cmd.GitVersion=linux_{{ .Arch }}:{{ .Version }}:[CORE]
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    overrides:
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=aarch64-linux-gnu-gcc
+
+archives:
+  - id: default
+    formats: [binary]
+    name_template: "{{ .Binary }}"
+
+checksum:
+  name_template: checksums.txt
+
+# Keyless (sigstore) signing of the binaries; produces rtcagent[-arm64].sig/.pem.
+signs:
+  - id: cosign
+    cmd: cosign
+    artifacts: binary
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - --yes
+      - --output-signature=${signature}
+      - --output-certificate=${certificate}
+      - ${artifact}
+
+# SPDX SBOM of each binary; produces rtcagent[-arm64].spdx.json.
+sboms:
+  - id: spdx
+    artifacts: binary
+    documents:
+      - "{{ .ArtifactName }}.spdx.json"
+
+release:
+  draft: false
+  prerelease: auto
+
+nfpms:
+  - id: deb
+    package_name: rtcagent
+    file_name_template: "rtcagent_{{ .Version }}_{{ .Arch }}"
+    formats: [deb]
+    vendor: QXIP
+    homepage: https://github.com/sipcapture/rtcagent
+    maintainer: "QXIP <support@qxip.net>"
+    description: |-
+      RTCagent eBPF HEP capture agent under AGPL-3.0
+    bindir: /usr/local/rtcagent/bin
+    contents:
+      - src: ./examples/README
+        dst: /usr/local/rtcagent/log/README
+      - src: ./examples/rtcagent.service
+        dst: /etc/systemd/system/rtcagent.service
+      - src: ./examples/rtcagent.init
+        dst: /etc/init.d/rtcagent
+      - src: ./examples/rtcagent.env.example
+        dst: /usr/local/rtcagent/etc/rtcagent.env.example
+        type: config
+
+  - id: rpm
+    package_name: rtcagent
+    file_name_template: "rtcagent_{{ .Version }}.{{ .Arch }}"
+    formats: [rpm]
+    vendor: QXIP
+    homepage: https://github.com/sipcapture/rtcagent
+    maintainer: "QXIP <support@qxip.net>"
+    description: |-
+      RTCagent eBPF HEP capture agent under AGPL-3.0
+    bindir: /usr/local/rtcagent/bin
+    contents:
+      - src: ./examples/README
+        dst: /usr/local/rtcagent/log/README
+      - src: ./examples/rtcagent.service
+        dst: /etc/systemd/system/rtcagent.service
+      - src: ./examples/rtcagent.init
+        dst: /etc/init.d/rtcagent
+      - src: ./examples/rtcagent.env.example
+        dst: /usr/local/rtcagent/etc/rtcagent.env.example
+        type: config
