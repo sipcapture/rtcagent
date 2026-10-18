@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log"
 	"rtcagent/hepclient/hepsender"
+	"rtcagent/pkg/metrics"
 	"rtcagent/user/event"
 	"sync"
 	"sync/atomic"
@@ -145,6 +146,7 @@ func (ep *EventProcessor) Write(e event.IEventStruct) {
 		return
 	default:
 		n := ep.dropped.Add(1)
+		metrics.EventsDropped.Inc()
 		if n == 1 || n%1000 == 0 {
 			ep.logger.Printf("incoming queue is full, dropped %d events so far", n)
 		}

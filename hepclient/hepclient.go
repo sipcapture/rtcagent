@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"rtcagent/pkg/metrics"
 	"strings"
 	"sync"
 	"time"
@@ -182,6 +183,7 @@ func (h *HepClient) connectServer() error {
 // Output queues a HEP message for asynchronous delivery.
 func (h *HepClient) Output(msg []byte) {
 	h.hepQueue <- msg
+	metrics.HEPQueueLength.Set(float64(len(h.hepQueue)))
 }
 
 // Send writes a single HEP message, transparently reconnecting (with backoff)
@@ -198,6 +200,7 @@ func (h *HepClient) Send(msg []byte) error {
 	}
 
 	log.Printf("hep send error: %v; reconnecting to %s", err, h.addr)
+	metrics.HEPSendErrors.Inc()
 	return h.reconnectAndSend(msg, err)
 }
 
@@ -228,6 +231,7 @@ func (h *HepClient) reconnectAndSend(msg []byte, cause error) error {
 		}
 
 		h.client.errCnt = 0
+		metrics.HEPReconnects.Inc()
 		return nil
 	}
 
@@ -251,6 +255,7 @@ func (h *HepClient) Start() {
 		if err := h.Send(msg); err != nil {
 			log.Printf("hep message dropped: %v", err)
 		}
+		metrics.HEPQueueLength.Set(float64(len(h.hepQueue)))
 	}
 }
 
