@@ -15,7 +15,10 @@ require (
 	golang.org/x/sys v0.48.0
 )
 
-require github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+require (
+	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+)
 
 require (
 	github.com/avast/retry-go v3.0.0+incompatible // indirect
