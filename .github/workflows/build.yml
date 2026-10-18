@@ -10,6 +10,7 @@ permissions:
   packages: write
   id-token: write
   attestations: write
+  security-events: write
 
 env:
   REGISTRY: ghcr.io
@@ -92,3 +93,49 @@ jobs:
     - name: Sign the container image (keyless)
       if: github.event_name == 'release'
       run: cosign sign --yes ghcr.io/sipcapture/rtcagent@${{ steps.docker.outputs.digest }}
+
+    - name: Generate container image SBOM (syft)
+      if: github.event_name == 'release'
+      uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      with:
+        image: ghcr.io/sipcapture/rtcagent@${{ steps.docker.outputs.digest }}
+        format: spdx-json
+        output-file: rtcagent-image.spdx.json
+        registry-username: ${{ github.actor }}
+        registry-password: ${{ secrets.GITHUB_TOKEN }}
+        upload-artifact: false
+        upload-release-assets: false
+
+    - name: Scan container image (Trivy)
+      if: github.event_name == 'release'
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        image-ref: ghcr.io/sipcapture/rtcagent@${{ steps.docker.outputs.digest }}
+        format: sarif
+        output: trivy-image.sarif
+        severity: CRITICAL,HIGH
+        ignore-unfixed: true
+        exit-code: "0"
+
+    - name: Upload Trivy results to code scanning
+      if: github.event_name == 'release'
+      uses: github/codeql-action/upload-sarif@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3
+      with:
+        sarif_file: trivy-image.sarif
+        category: trivy-container
+
+    - name: Attest container image SBOM (cosign)
+      if: github.event_name == 'release'
+      run: |
+        cosign attest --yes \
+          --predicate rtcagent-image.spdx.json \
+          --type spdxjson \
+          "ghcr.io/sipcapture/rtcagent@${{ steps.docker.outputs.digest }}"
+
+    - name: Attach container SBOM and scan report to the release
+      if: github.event_name == 'release'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload "${{ github.ref_name }}" \
+          rtcagent-image.spdx.json trivy-image.sarif --clobber
