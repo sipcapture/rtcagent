@@ -141,7 +141,9 @@ func (this *MTcprttProbe) MakeUI() error {
 
 func (this *MTcprttProbe) Close() error {
 
-	this.linkData.Close()
+	if err := this.linkData.Close(); err != nil {
+		return fmt.Errorf("couldn't close link: %w", err)
+	}
 	if err := this.bpfManager.Stop(manager.CleanAll); err != nil {
 		return fmt.Errorf("couldn't stop manager %v", err)
 	}

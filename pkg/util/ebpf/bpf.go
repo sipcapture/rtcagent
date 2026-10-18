@@ -94,7 +94,7 @@ func IsEnableBTF() (bool, error) {
 		return true, nil
 	}
 
-	var KernelConfig = make(map[string]string)
+	var KernelConfig map[string]string
 
 	KernelConfig, e = GetSystemConfig()
 	if e != nil {
@@ -114,10 +114,7 @@ func IsEnableBTF() (bool, error) {
 
 // check BPF CONFIG
 func IsEnableBPF() (bool, error) {
-	var e error
-	var KernelConfig = make(map[string]string)
-
-	KernelConfig, e = GetSystemConfig()
+	KernelConfig, e := GetSystemConfig()
 	if e != nil {
 		return false, e
 	}

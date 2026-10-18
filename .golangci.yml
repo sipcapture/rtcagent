@@ -1,0 +1,22 @@
+# golangci-lint configuration (schema v2).
+#
+# The default ("standard") linter set is used, with the following tuning:
+#   * `unused` is disabled for now: this code base still carries a number of
+#     dead symbols (including a deliberately commented-out worker pool in
+#     pkg/event_processor) that are cleaned up separately to keep this change
+#     focused on correctness.
+#   * staticcheck is restricted to the correctness checks (SA*); the purely
+#     stylistic/simplification checks (S*, ST*, QF*) are intentionally omitted.
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  disable:
+    - unused
+  settings:
+    staticcheck:
+      checks:
+        - SA*

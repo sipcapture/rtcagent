@@ -13,13 +13,13 @@ import (
 func TestTcprttEventDecodeIPv4(t *testing.T) {
 	ev := &TcprttEvent{}
 	buf := &bytes.Buffer{}
-	binary.Write(buf, binary.LittleEndian, uint16(5060))
-	binary.Write(buf, binary.LittleEndian, uint16(5070))
-	binary.Write(buf, binary.LittleEndian, uint8(afINET))
+	_ = binary.Write(buf, binary.LittleEndian, uint16(5060))
+	_ = binary.Write(buf, binary.LittleEndian, uint16(5070))
+	_ = binary.Write(buf, binary.LittleEndian, uint8(afINET))
 	buf.Write([]byte{0, 0, 0})
-	binary.Write(buf, binary.LittleEndian, uint32(12))
-	binary.Write(buf, binary.LittleEndian, uint32(0x0A000001))
-	binary.Write(buf, binary.LittleEndian, uint32(0x0A000002))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(12))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(0x0A000001))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(0x0A000002))
 	buf.Write(make([]byte, 32))
 
 	if err := ev.Decode(buf.Bytes()); err != nil {
@@ -40,13 +40,13 @@ func TestTcprttEventDecodeIPv6(t *testing.T) {
 	want := net.ParseIP("2001:db8::1")
 	ev := &TcprttEvent{}
 	buf := &bytes.Buffer{}
-	binary.Write(buf, binary.LittleEndian, uint16(5060))
-	binary.Write(buf, binary.LittleEndian, uint16(5070))
-	binary.Write(buf, binary.LittleEndian, uint8(afINET6))
+	_ = binary.Write(buf, binary.LittleEndian, uint16(5060))
+	_ = binary.Write(buf, binary.LittleEndian, uint16(5070))
+	_ = binary.Write(buf, binary.LittleEndian, uint8(afINET6))
 	buf.Write([]byte{0, 0, 0})
-	binary.Write(buf, binary.LittleEndian, uint32(25))
-	binary.Write(buf, binary.LittleEndian, uint32(0))
-	binary.Write(buf, binary.LittleEndian, uint32(0))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(25))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(0))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(0))
 	var addr [16]byte
 	copy(addr[:], want.To16())
 	buf.Write(addr[:])
