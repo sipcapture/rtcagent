@@ -2,6 +2,11 @@
 <img src="https://github.com/sipcapture/rtcagent/assets/1423657/e1d78a7e-cf2e-4775-9177-b0a730ba66c6" height=100>
 </a>
 
+[![CI](https://github.com/sipcapture/rtcagent/actions/workflows/ci.yml/badge.svg)](https://github.com/sipcapture/rtcagent/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/sipcapture/rtcagent/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/sipcapture/rtcagent/security/code-scanning)
+[![Release](https://img.shields.io/github/v/release/sipcapture/rtcagent?sort=semver)](https://github.com/sipcapture/rtcagent/releases/latest)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
 > RTCagent is an HEP/eBPF powered observability tool for VoIP/WebRTC Applications.
 
 <br>
@@ -42,6 +47,30 @@ curl -fsSL github.com/sipcapture/rtcagent/releases/latest/download/rtcagent-arm6
 Prefer using packages? Get the latest [deb and rpm](https://github.com/sipcapture/rtcagent/releases) releases for `amd64/x86` and `arm64/aarch64`.
 
 Each release also ships `checksums.txt`, keyless cosign signatures (`*.sig`/`*.pem`) and an SPDX SBOM, and the build has GitHub [artifact attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations) (`gh attestation verify <file> -R sipcapture/rtcagent`). The container image is signed and accompanied by an SBOM and a Trivy scan report (`rtcagent-image.spdx.json`, `trivy-image.sarif`), with the SBOM attached to the image as a cosign attestation.
+
+#### Verifying a release
+
+```bash
+# Checksums for every artifact
+sha256sum -c checksums.txt
+
+# GitHub build provenance
+gh attestation verify rtcagent -R sipcapture/rtcagent
+
+# Keyless cosign signature
+cosign verify-blob --certificate rtcagent.pem --signature rtcagent.sig \
+  --certificate-identity-regexp 'https://github.com/sipcapture/rtcagent/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com rtcagent
+
+# Container image and its SBOM attestation
+cosign verify --certificate-identity-regexp 'https://github.com/sipcapture/rtcagent/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/sipcapture/rtcagent:latest
+cosign verify-attestation --type spdxjson \
+  --certificate-identity-regexp 'https://github.com/sipcapture/rtcagent/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/sipcapture/rtcagent:latest
+```
 
 ### Usage
 
