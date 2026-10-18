@@ -15,8 +15,8 @@ import (
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 
-	manager "github.com/adubovikov/ebpfmanager"
 	"github.com/cilium/ebpf"
+	manager "github.com/gojue/ebpfmanager"
 	"golang.org/x/sys/unix"
 )
 
@@ -107,7 +107,7 @@ func (this *MRtpengineProbe) setupManagers() error {
 		DefaultKProbeMaxActive: 512,
 		VerifierOptions: ebpf.CollectionOptions{
 			Programs: ebpf.ProgramOptions{
-				LogSize: 2097152,
+				LogSizeStart: 2097152,
 			},
 		},
 		RLimit: &unix.Rlimit{

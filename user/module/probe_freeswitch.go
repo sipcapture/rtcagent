@@ -36,8 +36,8 @@ import (
 	"rtcagent/user/config"
 	"rtcagent/user/event"
 
-	manager "github.com/adubovikov/ebpfmanager"
 	"github.com/cilium/ebpf"
+	manager "github.com/gojue/ebpfmanager"
 	"golang.org/x/sys/unix"
 )
 
@@ -175,7 +175,7 @@ func (this *MFreeSwitchProbe) setupManagers() error {
 
 		VerifierOptions: ebpf.CollectionOptions{
 			Programs: ebpf.ProgramOptions{
-				LogSize: 2097152,
+				LogSizeStart: 2097152,
 			},
 		},
 

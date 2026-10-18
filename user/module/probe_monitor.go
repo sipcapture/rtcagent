@@ -42,11 +42,11 @@ import (
 
 	"rtcagent/model"
 
-	manager "github.com/adubovikov/ebpfmanager"
 	tm "github.com/buger/goterm"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
+	manager "github.com/gojue/ebpfmanager"
 	"golang.org/x/sys/unix"
 )
 
@@ -313,20 +313,24 @@ func (this *MMonitorProbe) setupManagers() error {
 
 		this.userFunctionArray = append(this.userFunctionArray, userFunction...)
 
-		for index, userFunction := range this.userFunctionArray {
+		// TODO(rtcagent): gojue/ebpfmanager does not expose uprobe attach
+		// cookies, so the per-function cookie consumed by bpf_get_attach_cookie
+		// in monitor_kern.c can no longer be set and the function name is not
+		// reported for usercall events. Restore it by attaching these uprobes
+		// directly with cilium/ebpf/link (link.UprobeOptions.Cookie) or by using
+		// a manager fork that restores Probe.Cookie.
+		for _, userFunction := range this.userFunctionArray {
 			probes = append(probes, &manager.Probe{
 				Section:          "uprobe/user_function",
 				EbpfFuncName:     "user_function",
 				AttachToFuncName: userFunction,
 				BinaryPath:       binaryPath,
-				Cookie:           uint64(index + 1),
 			})
 			probes = append(probes, &manager.Probe{
 				Section:          "uretprobe/user_function",
 				EbpfFuncName:     "user_ret_function",
 				AttachToFuncName: userFunction,
 				BinaryPath:       binaryPath,
-				Cookie:           uint64(index + 1),
 			})
 		}
 	} else if networkcall {
@@ -335,7 +339,6 @@ func (this *MMonitorProbe) setupManagers() error {
 			Section:          "kprobe/tcp_v4_connect",
 			EbpfFuncName:     "tcp_v4_connect",
 			AttachToFuncName: "tcp_v4_connect",
-			Cookie:           uint64(1),
 		})
 
 		/*
@@ -343,14 +346,12 @@ func (this *MMonitorProbe) setupManagers() error {
 				Section:          "kretprobe/tcp_v4_connect",
 				EbpfFuncName:     "tcp_v4_connect_ret",
 				AttachToFuncName: "tcp_v4_connect",
-				Cookie:           uint64(1),
 			})
 
 			probes = append(probes, &manager.Probe{
 				Section:          "kprobe/tcp_rcv_state_process",
 				EbpfFuncName:     "tcp_rcv_state_process",
 				AttachToFuncName: "tcp_rcv_state_process",
-				Cookie:           uint64(2),
 			})
 
 		*/
@@ -358,7 +359,6 @@ func (this *MMonitorProbe) setupManagers() error {
 			Section:          "tracepoint/sock/inet_sock_set_state",
 			EbpfFuncName:     "handle_set_state",
 			AttachToFuncName: "handle_set_state",
-			Cookie:           uint64(3),
 		})
 
 		eventMap = "netevents"
@@ -401,7 +401,7 @@ func (this *MMonitorProbe) setupManagers() error {
 
 		VerifierOptions: ebpf.CollectionOptions{
 			Programs: ebpf.ProgramOptions{
-				LogSize: 2097152,
+				LogSizeStart: 2097152,
 			},
 		},
 
