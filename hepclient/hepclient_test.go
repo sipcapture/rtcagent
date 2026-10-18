@@ -199,3 +199,90 @@ func TestConnectServerUnsupportedTransport(t *testing.T) {
 		t.Fatal("expected unsupported transport to return an error")
 	}
 }
+
+func TestCloseWithoutConnection(t *testing.T) {
+	h := &HepClient{addr: "127.0.0.1:9060", transport: "tcp"}
+
+	if err := h.Close(); err != nil {
+		t.Fatalf("Close on an unconnected client: %v", err)
+	}
+	// Close must be idempotent.
+	if err := h.Close(); err != nil {
+		t.Fatalf("second Close: %v", err)
+	}
+}
+
+func TestSendWithoutConnectionReturnsError(t *testing.T) {
+	h := &HepClient{
+		addr:       "127.0.0.1:0",
+		transport:  "tcp",
+		maxRetries: 1,
+		backoff:    time.Millisecond,
+		maxBackoff: time.Millisecond,
+	}
+
+	if err := h.Send([]byte("HEP3")); err == nil {
+		t.Fatal("expected Send to return an error when the client is not connected")
+	}
+}
+
+func TestWithRetryPolicy(t *testing.T) {
+	h := &HepClient{backoff: defaultBackoff, maxBackoff: defaultMaxBackoff}
+	WithRetryPolicy(3, time.Second, 2*time.Second)(h)
+
+	if h.maxRetries != 3 || h.backoff != time.Second || h.maxBackoff != 2*time.Second {
+		t.Fatalf("unexpected retry policy: retries=%d backoff=%s maxBackoff=%s", h.maxRetries, h.backoff, h.maxBackoff)
+	}
+
+	// Non-positive durations must keep the defaults.
+	h2 := &HepClient{backoff: defaultBackoff, maxBackoff: defaultMaxBackoff}
+	WithRetryPolicy(0, 0, 0)(h2)
+	if h2.backoff != defaultBackoff || h2.maxBackoff != defaultMaxBackoff {
+		t.Fatal("zero backoff values must not override the defaults")
+	}
+}
+
+func TestSendDeliversMessage(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+
+	received := make(chan []byte, 1)
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		buf := make([]byte, 64)
+		n, _ := conn.Read(buf)
+		received <- buf[:n]
+	}()
+
+	host, port, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		t.Fatalf("split addr: %v", err)
+	}
+
+	h, err := NewHepClient(host, port, "tcp")
+	if err != nil {
+		t.Fatalf("NewHepClient: %v", err)
+	}
+	defer h.Close()
+
+	if err := h.Send([]byte("HEP3test")); err != nil {
+		t.Fatalf("Send: %v", err)
+	}
+
+	select {
+	case got := <-received:
+		if string(got) != "HEP3test" {
+			t.Fatalf("unexpected payload: %q", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for the HEP message")
+	}
+}

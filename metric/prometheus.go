@@ -59,15 +59,14 @@ func (p *Prometheus) setup() (err error) {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		_, err = w.Write([]byte(`<html>
+		if _, err := w.Write([]byte(`<html>
 				<head><title>eBPF Exporter</title></head>
 				<body>
 				<h1>eBPF Exporter</h1>
 				<p><a href="` + metricsPath + `">Metrics</a></p>
 				</body>
-				</html>`))
-		if err != nil {
-			log.Fatalf("Error sending response body: %s", err)
+				</html>`)); err != nil {
+			log.Printf("error sending response body: %v", err)
 		}
 	})
 
@@ -84,11 +83,14 @@ func (p *Prometheus) setup() (err error) {
 		l, err := net.Listen("tcp", listenAddress)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("metrics listener error: %v", err)
+			return
 		}
 
 		//fmt.Println(`{"server_state":"listening"}`)
-		log.Fatal(p.s.Serve(l))
+		if err := p.s.Serve(l); err != nil && err != http.ErrServerClosed {
+			log.Printf("metrics server stopped: %v", err)
+		}
 	}()
 
 	return err

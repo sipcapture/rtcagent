@@ -1,0 +1,18 @@
+# Build output
+/bin/
+*.deb
+*.rpm
+
+# Test / coverage artifacts
+*.test
+*.out
+coverage.out
+
+# Editors and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+# Compiled test main package (created by go test in pkg/proc/go_elf)
+/pkg/proc/go_elf/go_elf

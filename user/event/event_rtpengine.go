@@ -21,17 +21,17 @@ const (
 
 type RtpengineEvent struct {
 	event_type EventType
-	DataType   int64    `json:"dataType"`
-	Timestamp  uint64   `json:"timestamp"`
-	Pid        uint32   `json:"pid"`
-	Tid        uint32   `json:"tid"`
+	DataType   int64  `json:"dataType"`
+	Timestamp  uint64 `json:"timestamp"`
+	Pid        uint32 `json:"pid"`
+	Tid        uint32 `json:"tid"`
 	SrcIP      IpAddr
 	DstIP      IpAddr
-	SrcPort    uint16 `json:"srcPort"`
-	DstPort    uint16 `json:"dstPort"`
+	SrcPort    uint16                 `json:"srcPort"`
+	DstPort    uint16                 `json:"dstPort"`
 	Data       [maxMediaDataSize]byte `json:"data"`
-	DataLen    int32             `json:"dataLen"`
-	Comm       [16]byte          `json:"Comm"`
+	DataLen    int32                  `json:"dataLen"`
+	Comm       [16]byte               `json:"Comm"`
 }
 
 func (ev *RtpengineEvent) Decode(payload []byte) (err error) {

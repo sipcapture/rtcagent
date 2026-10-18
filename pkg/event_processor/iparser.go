@@ -91,8 +91,8 @@ func NewParser(payload []byte) IParser {
 	if len(payload) > 0 {
 		var newParser IParser
 		for _, parser := range GetAllModules() {
-			err := parser.detect(payload)
-			if err == nil {
+			if err := parser.detect(payload); err == nil {
+				newParser = parser
 				break
 			}
 		}

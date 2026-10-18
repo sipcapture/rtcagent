@@ -139,7 +139,7 @@ func (kem *FreeSwitchEvent) String() string {
 	dst := ReceiveFreewSwitchInfo{}
 	err := binary.Read(buf, binary.BigEndian, &dst)
 	if err != nil {
-		panic(err)
+		return fmt.Sprintf("PID:%d, Comm:%s, TID:%d, malformed DstInfo: %v", kem.Pid, bytes.TrimSpace(kem.Comm[:]), kem.Tid, err)
 	}
 
 	srcIP := net.IP(dst.IP.Addr[:4]).String()
@@ -183,7 +183,7 @@ func (kem *FreeSwitchEvent) GenerateHEP() ([]byte, error) {
 	dst := ReceiveFreewSwitchInfo{}
 	err := binary.Read(buf, binary.BigEndian, &dst)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("decode DstInfo: %w", err)
 	}
 
 	srcIP := net.IP(dst.IP.Addr[:4])

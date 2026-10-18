@@ -67,8 +67,8 @@ func (this *MTcprttProbe) Start() error {
 }
 
 type bpfPrograms struct {
-	TcpClose            *ebpf.Program `ebpf:"tcp_close"`
-	TcpRcvEstablished   *ebpf.Program `ebpf:"tcp_rcv_established"`
+	TcpClose          *ebpf.Program `ebpf:"tcp_close"`
+	TcpRcvEstablished *ebpf.Program `ebpf:"tcp_rcv_established"`
 }
 
 type bpfMaps struct {

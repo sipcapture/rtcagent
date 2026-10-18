@@ -136,7 +136,7 @@ func (kem *OpensipsEvent) String() string {
 	t := ReceiveInfo{}
 	err := binary.Read(buf, binary.LittleEndian, &t)
 	if err != nil {
-		panic(err)
+		return fmt.Sprintf("PID:%d, Comm:%s, TID:%d, malformed RcInfo: %v", kem.Pid, bytes.TrimSpace(kem.Comm[:]), kem.Tid, err)
 	}
 
 	srcIP := netIPFromAddr(t.SrcIP)
@@ -177,7 +177,7 @@ func (kem *OpensipsEvent) GenerateHEP() ([]byte, error) {
 	t := ReceiveInfo{}
 	err := binary.Read(buf, binary.LittleEndian, &t)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("decode RcInfo: %w", err)
 	}
 
 	srcIP := netIPFromAddr(t.SrcIP)
