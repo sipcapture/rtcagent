@@ -27,7 +27,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"rtcagent/hepclient"
 	"rtcagent/hepclient/hepsender"
 	"rtcagent/user/config"
 	"rtcagent/user/module"
@@ -79,7 +78,7 @@ func tcprttCommandFunc(command *cobra.Command, args []string) {
 		log.Println("HEP client will be started")
 
 		var err error
-		hepsender.Hepsender, err = hepclient.NewHepClient(gConf.HepServer, gConf.HepPort, gConf.HepTransport)
+		hepsender.Hepsender, err = newHepClient(gConf)
 		if err != nil {
 			log.Fatalf("HEP client couldn't be init: addr:%s, port: %s, transport: %s. Error: %s", gConf.HepServer, gConf.HepPort, gConf.HepTransport, err.Error())
 			os.Exit(1)
