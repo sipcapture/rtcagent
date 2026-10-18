@@ -59,7 +59,7 @@ func kamailioCommandFunc(command *cobra.Command, args []string) {
 
 	mod := module.GetModuleByName(module.ModuleNameKamailio)
 
-	logger := log.New(os.Stdout, "kamailio_", log.LstdFlags)
+	logger := newLogger("kamailio", command)
 	logger.Printf("RTCAGENT :: version :%s", GitVersion)
 	logger.Printf("RTCAGENT :: start to run %s module", mod.Name())
 

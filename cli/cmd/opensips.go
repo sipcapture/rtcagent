@@ -59,7 +59,7 @@ func opensipsCommandFunc(command *cobra.Command, args []string) {
 
 	mod := module.GetModuleByName(module.ModuleNameOpensips)
 
-	logger := log.New(os.Stdout, "opensips_", log.LstdFlags)
+	logger := newLogger("opensips", command)
 	logger.Printf("RTCAGENT :: version :%s", GitVersion)
 	logger.Printf("RTCAGENT :: start to run %s module", mod.Name())
 

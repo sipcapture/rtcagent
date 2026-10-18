@@ -59,7 +59,7 @@ func freeswitchCommandFunc(command *cobra.Command, args []string) {
 
 	mod := module.GetModuleByName(module.ModuleNameFreeSwitch)
 
-	logger := log.New(os.Stdout, "freeswitch_", log.LstdFlags)
+	logger := newLogger("freeswitch", command)
 	logger.Printf("RTCAGENT :: version :%s", GitVersion)
 	logger.Printf("RTCAGENT :: start to run %s module", mod.Name())
 

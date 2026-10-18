@@ -38,7 +38,7 @@ func rtpengineCommandFunc(command *cobra.Command, args []string) {
 
 	mod := module.GetModuleByName(module.ModuleNameRtpengine)
 
-	logger := log.New(os.Stdout, "rtpengine_", log.LstdFlags)
+	logger := newLogger("rtpengine", command)
 	logger.Printf("RTCAGENT :: version :%s", GitVersion)
 	logger.Printf("RTCAGENT :: start to run %s module", mod.Name())
 
