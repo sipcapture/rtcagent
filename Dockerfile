@@ -15,7 +15,8 @@ RUN apk add --no-cache curl ca-certificates
 WORKDIR /out
 RUN ASSET="rtcagent"; \
     if [ "${TARGETARCH}" = "arm64" ]; then ASSET="rtcagent-arm64"; fi; \
-    curl -fsSL "https://github.com/sipcapture/rtcagent/releases/${RTCAGENT_VERSION}/download/${ASSET}" -o rtcagent \
+    if [ "${RTCAGENT_VERSION}" = "latest" ]; then RELEASE_BASE="releases/latest/download"; else RELEASE_BASE="releases/download/${RTCAGENT_VERSION}"; fi; \
+    curl -fsSL "https://github.com/sipcapture/rtcagent/${RELEASE_BASE}/${ASSET}" -o rtcagent \
     && if [ -n "${RTCAGENT_SHA256}" ]; then echo "${RTCAGENT_SHA256}  rtcagent" | sha256sum -c -; fi \
     && chmod +x rtcagent
 
