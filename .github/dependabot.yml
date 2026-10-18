@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Keep Go modules up to date, grouped to reduce PR noise.
+  - package-ecosystem: gomod
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      go-modules:
+        patterns:
+          - "*"
+
+  # Keep GitHub Actions pinned up to date.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
