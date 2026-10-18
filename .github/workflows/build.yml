@@ -18,9 +18,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Go
-      uses: actions/setup-go@v5.0.2
+      uses: actions/setup-go@v7
       with:
         go-version: 1.21
     - name: Setup Build Env
@@ -79,14 +79,14 @@ jobs:
           overwrite: true    
           
     - name: Log in to the Container registry
-      uses: docker/login-action@v2.0.0
+      uses: docker/login-action@v4.6.0
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Docker Build and push
-      uses: docker/build-push-action@v3.0.0
+      uses: docker/build-push-action@v7.4.0
       with:
         context: .
         push: true
