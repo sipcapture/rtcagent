@@ -27,6 +27,7 @@ import (
 	"rtcagent/hepclient/hepsender"
 	"rtcagent/user/event"
 	"sync"
+	"sync/atomic"
 )
 
 const (
@@ -44,6 +45,11 @@ type EventProcessor struct {
 
 	// output model
 	isHex bool
+
+	// dropped counts events discarded because the incoming queue was full,
+	// which happens when the kernel side produces events faster than they can
+	// be dispatched.
+	dropped atomic.Uint64
 }
 
 func (ep *EventProcessor) GetLogger() *log.Logger {
@@ -129,11 +135,25 @@ func (ep *EventProcessor) delWorkerByUUID(worker IWorker) {
 }
 
 // Write event
+//
+// The enqueue is non-blocking: when the incoming queue is full the event is
+// dropped and counted instead of blocking the eBPF reader, which would stall
+// the kernel side and lose more events (or deadlock the pipeline).
 func (ep *EventProcessor) Write(e event.IEventStruct) {
 	select {
 	case ep.incoming <- e:
 		return
+	default:
+		n := ep.dropped.Add(1)
+		if n == 1 || n%1000 == 0 {
+			ep.logger.Printf("incoming queue is full, dropped %d events so far", n)
+		}
 	}
+}
+
+// Dropped returns the number of events dropped due to a full incoming queue.
+func (ep *EventProcessor) Dropped() uint64 {
+	return ep.dropped.Load()
 }
 
 func (ep *EventProcessor) Close() error {
