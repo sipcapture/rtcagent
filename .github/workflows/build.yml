@@ -39,7 +39,7 @@ jobs:
       uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
     - name: Install syft
-      uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      uses: anchore/sbom-action/download-syft@dfcb83b97731532d72be422cbc51ee64adb6fd56 # v0.24.4
 
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
@@ -96,7 +96,7 @@ jobs:
 
     - name: Generate container image SBOM (syft)
       if: github.event_name == 'release'
-      uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      uses: anchore/sbom-action@dfcb83b97731532d72be422cbc51ee64adb6fd56 # v0.24.4
       with:
         image: ghcr.io/sipcapture/rtcagent@${{ steps.docker.outputs.digest }}
         format: spdx-json
@@ -119,7 +119,7 @@ jobs:
 
     - name: Upload Trivy results to code scanning
       if: github.event_name == 'release'
-      uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v3
+      uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v3
       with:
         sarif_file: trivy-image.sarif
         category: trivy-container
